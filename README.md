@@ -29,7 +29,7 @@ Un sistema web automatizado diseñado para ayudar a los docentes a optimizar el 
 * **Base de Datos:** MySQL
 * **Formatos de Exportación:** Microsoft Excel
 
-## 📋 Requisitos Previos
+## Requisitos Previos
 
 Antes de ejecutar el proyecto, asegúrate de contar con:
 1. Un servidor local instalado (Laragon, etc.).
