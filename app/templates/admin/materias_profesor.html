@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Materias de {{ profesor.nombre }} – Admin{% endblock %}
+{% block page_title %}Materias del Profesor{% endblock %}
+{% block page_subtitle %}{{ profesor.nombre }} · {{ profesor.correo }}{% endblock %}
+
+{% block content %}
+<div class="header-actions" style="margin-bottom: 2rem;">
+  <div>
+    <p style="color: var(--gray-600); font-size: 0.9rem;">
+      <i class="ti ti-books" style="color: var(--primary);"></i>
+      {{ materias|length }} materia{{ 's' if materias|length != 1 else '' }} asignada{{ 's' if materias|length != 1 else '' }}
+    </p>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <a href="{{ url_for('admin.index') }}" class="btn-volver">
+      <i class="ti ti-arrow-left"></i>
+      Volver a Profesores
+    </a>
+    <a href="{{ url_for('admin.nueva_materia', id=profesor.id) }}" class="btn-primary-custom">
+      <i class="ti ti-plus"></i>
+      Agregar Materia
+    </a>
+  </div>
+</div>
+
+{% if materias %}
+<div class="materias-grid">
+  {% for m in materias %}
+  <div class="card-premium materia-card">
+    <div class="card-body-premium">
+      <div class="materia-nombre">{{ m.nombre }}</div>
+
+      <div class="materia-info">
+        {% if m.codigo %}
+        <span class="info-item">
+          <i class="ti ti-hash"></i>{{ m.codigo }}
+        </span>
+        {% endif %}
+        {% if m.periodo %}
+        <span class="info-item">
+          <i class="ti ti-calendar"></i>{{ m.periodo }}
+        </span>
+        {% endif %}
+        {% if not m.codigo and not m.periodo %}
+        <span class="info-item sin-info">Sin código ni período</span>
+        {% endif %}
+      </div>
+
+      <span class="rubricas-badge">
+        <i class="ti ti-list-check"></i>
+        {{ m.rubricas|length }} rúbrica{{ 's' if m.rubricas|length != 1 else '' }}
+      </span>
+
+      <div class="materia-actions">
+        <form method="POST" action="{{ url_for('admin.eliminar_materia', materia_id=m.id) }}"
+              onsubmit="return confirm('¿Eliminar la materia {{ m.nombre }} y todos sus datos?');">
+          <button type="submit" class="btn-eliminar" title="Eliminar materia">
+            <i class="ti ti-trash"></i>
+            Eliminar
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state-materias">
+  <i class="ti ti-books"></i>
+  <h3 style="font-size:1.1rem; margin-bottom:0.5rem; color:var(--gray-800);">Sin materias asignadas</h3>
+  <p>Este profesor aún no tiene materias. Agrega la primera.</p>
+  <a href="{{ url_for('admin.nueva_materia', id=profesor.id) }}" class="btn-primary-custom">
+    <i class="ti ti-plus"></i>
+    Agregar Materia
+  </a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block page_title %}Resultado de la evaluación{% endblock %}
+{% block page_subtitle %}Análisis detallado generado por Gemini AI{% endblock %}
+
+{% block extra_css %}
+<style>
+  .criterio-resultado {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--gray-100);
+  }
+  .criterio-resultado:last-child { border-bottom: none; }
+
+  .cr-badge {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem;
+    margin-top: 2px;
+  }
+  .cr-badge.cumple   { background: #E8F5E9; color: #2E7D32; }
+  .cr-badge.no-cumple{ background: #FFEBEE; color: #C62828; }
+
+  .cr-body { flex: 1; }
+  .cr-nombre { font-weight: 600; font-size: 0.9rem; color: var(--gray-800); }
+  .cr-comment{ font-size: 0.8rem; color: var(--gray-600); margin-top: 3px; line-height: 1.5; }
+
+  .cr-right { text-align: right; flex-shrink: 0; }
+  .cr-pts   { font-weight: 700; font-size: 0.95rem; color: var(--primary-dark); }
+  .cr-peso  { font-size: 0.72rem; color: var(--gray-500); }
+
+  .retro-corta-box {
+    background: linear-gradient(135deg, var(--primary-soft) 0%, #fff 100%);
+    border-left: 4px solid var(--primary);
+    padding: 1rem 1.25rem;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--primary-dark);
+    line-height: 1.6;
+  }
+
+  .label-cumple   { background:#E8F5E9; color:#2E7D32; font-size:0.7rem; font-weight:700; padding:2px 8px; border-radius:20px; }
+  .label-nocumple { background:#FFEBEE; color:#C62828; font-size:0.7rem; font-weight:700; padding:2px 8px; border-radius:20px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.5rem;">
+  <div style="display:flex; align-items:center; gap:6px; font-size:0.78rem;">
+    <a href="{{ url_for('dashboard.index') }}" style="color:var(--gray-500); text-decoration:none; display:flex; align-items:center; gap:3px;">
+      <i class="ti ti-home" style="font-size:0.8rem;"></i> Dashboard
+    </a>
+    <i class="ti ti-chevron-right" style="font-size:0.65rem; color:var(--gray-400);"></i>
+    <a href="{{ url_for('calificacion.historial') }}" style="color:var(--gray-500); text-decoration:none;">Historial</a>
+    <i class="ti ti-chevron-right" style="font-size:0.65rem; color:var(--gray-400);"></i>
+    <span style="color:var(--primary-dark); font-weight:600;">{{ tarea.estudiante_nombre }}</span>
+  </div>
+  <a href="{{ url_for('calificacion.historial') }}" class="btn-outline-custom">
+    <i class="ti ti-arrow-left"></i> Volver
+  </a>
+</div>
+
+{% set nota_max = tarea.rubrica.nota_maxima if tarea.rubrica else 10.0 %}
+{% set pct = (tarea.calificacion.nota_ia / nota_max) if nota_max > 0 else 0 %}
+{% set desglose = tarea.calificacion.get_desglose() %}
+
+<div class="grid-2">
+  <!-- ── Puntaje obtenido ── -->
+  <div class="card-premium">
+    <div class="card-header-premium" style="text-align:center;">
+      <i class="ti ti-chart-donut" style="font-size:1.5rem;"></i>
+      <strong>Puntaje obtenido</strong>
+    </div>
+    <div class="card-body-premium" style="text-align:center;">
+      <div style="position:relative; display:inline-block;">
+        <svg width="180" height="180" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="54" fill="none" stroke="#E8F5E9" stroke-width="8"/>
+          <circle cx="60" cy="60" r="54" fill="none"
+                  stroke="url(#gradient)" stroke-width="8"
+                  stroke-dasharray="{{ pct * 339.3 }}"
+                  stroke-dashoffset="0" stroke-linecap="round"
+                  transform="rotate(-90 60 60)"/>
+          <defs>
+            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#F9A825"/>
+              <stop offset="100%" style="stop-color:#2E7D32"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center;">
+          <div style="font-size:2.5rem; font-weight:800; color:var(--primary);">
+            {{ "%.1f"|format(tarea.calificacion.nota_ia) }}
+          </div>
+          <div style="font-size:0.8rem; color:var(--gray-600);">
+            de {{ nota_max | int if nota_max == nota_max | int else nota_max }}
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:1rem; width:100%; max-width:200px; margin-left:auto; margin-right:auto;">
+        <div style="display:flex; justify-content:space-between; font-size:0.72rem; color:var(--gray-600); margin-bottom:4px;">
+          <span>Cumplimiento</span>
+          <span style="font-weight:700; color:var(--primary-dark);">{{ "%.0f"|format(pct * 100) }}%</span>
+        </div>
+        <div style="height:8px; background:var(--gray-200); border-radius:10px; overflow:hidden;">
+          <div style="width:{{ "%.1f"|format(pct * 100) }}%; height:100%;
+                      background:linear-gradient(90deg, var(--primary), var(--gold));
+                      border-radius:10px;"></div>
+        </div>
+      </div>
+
+      <div style="margin-top:1.5rem;">
+        <span class="badge" style="background:var(--primary-soft); color:var(--primary); padding:6px 16px; border-radius:20px; font-weight:600;">
+          <i class="ti ti-robot"></i> Evaluado por Gemini AI
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Información de la tarea ── -->
+  <div class="card-premium">
+    <div class="card-header-premium">
+      <i class="ti ti-info-circle"></i>
+      <strong>Información de la tarea</strong>
+    </div>
+    <div class="card-body-premium">
+      <div style="margin-bottom:1rem;">
+        <div style="font-size:0.75rem; color:var(--gray-600);">Estudiante</div>
+        <div style="font-weight:700; font-size:1.1rem;">
+          {{ tarea.estudiante_nombre }}
+          <button type="button" class="btn-editar-nombre" title="Corregir nombre"
+                  onclick="corregirNombre({{ tarea.id }}, {{ tarea.estudiante_nombre|tojson }})"
+                  style="background:none; border:none; color:var(--gray-400); cursor:pointer; font-size:0.85rem; padding:2px 4px; margin-left:2px; border-radius:4px; vertical-align:middle;">
+            <i class="ti ti-pencil"></i>
+          </button>
+        </div>
+      </div>
+      <div style="margin-bottom:1rem;">
+        <div style="font-size:0.75rem; color:var(--gray-600);">Materia</div>
+        <div style="font-weight:500;">{{ tarea.materia.nombre }}</div>
+      </div>
+      <div style="margin-bottom:1rem;">
+        <div style="font-size:0.75rem; color:var(--gray-600);">Nota máxima (rúbrica)</div>
+        <div style="font-weight:700; color:var(--primary-dark);">
+          {{ nota_max | int if nota_max == nota_max | int else nota_max }} puntos
+        </div>
+      </div>
+      <div style="margin-bottom:1.25rem;">
+        <div style="font-size:0.75rem; color:var(--gray-600);">Fecha de calificación</div>
+        <div style="font-weight:500;">{{ tarea.subida_en.strftime('%d/%m/%Y %H:%M') }}</div>
+      </div>
+
+      {% if tarea.calificacion.retroalimentacion_corta %}
+      <div>
+        <div style="font-size:0.75rem; color:var(--gray-600); margin-bottom:6px; font-weight:600;">
+          <i class="ti ti-quote" style="margin-right:4px;"></i>Resumen de la calificación
+        </div>
+        <div class="retro-corta-box">
+          {{ tarea.calificacion.retroalimentacion_corta }}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── Rúbrica: criterios cumplidos / no cumplidos ── -->
+  {% if desglose %}
+  <div class="card-premium" style="grid-column:span 2;">
+    <div class="card-header-premium" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+      <span style="display:flex; align-items:center; gap:8px; font-weight:700; color:var(--primary-dark);">
+        <i class="ti ti-clipboard-check" style="color:var(--gold);"></i>
+        Evaluación por criterios de la rúbrica
+      </span>
+      <div style="display:flex; gap:10px; font-size:0.78rem;">
+        {% set ns = namespace(cumple=0, nocumple=0) %}
+        {% for d in desglose %}
+          {% if d.cumple %}{% set ns.cumple = ns.cumple + 1 %}{% else %}{% set ns.nocumple = ns.nocumple + 1 %}{% endif %}
+        {% endfor %}
+        <span class="label-cumple"><i class="ti ti-check"></i> {{ ns.cumple }} cumple</span>
+        <span class="label-nocumple"><i class="ti ti-x"></i> {{ ns.nocumple }} no cumple</span>
+      </div>
+    </div>
+    <div class="card-body-premium">
+      {% for d in desglose %}
+      <div class="criterio-resultado">
+        <div class="cr-badge {{ 'cumple' if d.cumple else 'no-cumple' }}">
+          <i class="ti {{ 'ti-check' if d.cumple else 'ti-x' }}"></i>
+        </div>
+        <div class="cr-body">
+          <div class="cr-nombre">{{ d.criterio }}</div>
+          {% if d.comentario %}
+          <div class="cr-comment">{{ d.comentario }}</div>
+          {% endif %}
+        </div>
+        <div class="cr-right">
+          <div class="cr-pts">{{ "%.2f"|format(d.obtenido) }} pts</div>
+          <div class="cr-peso">{{ d.peso }}% del total</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── Retroalimentación detallada (para el profesor) ── -->
+  <div class="card-premium" style="grid-column:span 2;">
+    <div class="card-header-premium">
+      <i class="ti ti-message-language"></i>
+      <strong>Retroalimentación detallada para el profesor</strong>
+    </div>
+    <div class="card-body-premium">
+      <div style="background:var(--gray-50); padding:1.5rem; border-radius:var(--radius-md); line-height:1.8; white-space:pre-line;">
+        {{ tarea.calificacion.retroalimentacion }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="display:flex; gap:1rem; justify-content:flex-end; margin-top:1.5rem;">
+  <a href="{{ url_for('calificacion.historial') }}" class="btn-outline-custom">
+    <i class="ti ti-history"></i> Ver historial
+  </a>
+  <a href="{{ url_for('calificacion.calificar') }}" class="btn-primary-custom">
+    <i class="ti ti-plus"></i> Nueva calificación
+  </a>
+</div>
+
+<!-- ✏️ Corrección manual del nombre del estudiante -->
+<script>
+function corregirNombre(tareaId, nombreActual) {
+  const nuevo = prompt('Corrige el nombre del estudiante:', nombreActual);
+  if (nuevo === null) return;
+  const nombreLimpio = nuevo.trim();
+  if (!nombreLimpio || nombreLimpio === nombreActual) return;
+
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = `/tarea/${tareaId}/renombrar`;
+
+  const inputNombre = document.createElement('input');
+  inputNombre.type = 'hidden';
+  inputNombre.name = 'estudiante_nombre';
+  inputNombre.value = nombreLimpio;
+  form.appendChild(inputNombre);
+
+  const inputVolver = document.createElement('input');
+  inputVolver.type = 'hidden';
+  inputVolver.name = 'volver_a';
+  inputVolver.value = window.location.pathname;
+  form.appendChild(inputVolver);
+
+  document.body.appendChild(form);
+  form.submit();
+}
+</script>
+{% endblock %}

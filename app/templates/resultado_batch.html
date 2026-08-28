@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block page_title %}Resultados del ZIP{% endblock %}
+{% block page_subtitle %}Calificación masiva completada{% endblock %}
+
+{% block extra_css %}
+<style>
+  .retro-preview {
+    font-size: 0.8rem;
+    color: var(--gray-600);
+    line-height: 1.5;
+    max-height: 60px;
+    overflow: hidden;
+    transition: max-height 0.35s ease;
+    cursor: pointer;
+  }
+
+  .retro-preview.expanded {
+    max-height: 600px;
+  }
+
+  .retro-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    color: var(--primary);
+    cursor: pointer;
+    font-weight: 600;
+    margin-top: 4px;
+    background: none;
+    border: none;
+    padding: 0;
+  }
+
+  .stat-resumen {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .stat-resumen { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .stat-box-batch {
+    background: white;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    padding: 1rem 1.25rem;
+    text-align: center;
+  }
+
+  .stat-box-batch .val {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--primary-dark);
+    line-height: 1;
+  }
+
+  .stat-box-batch .lbl {
+    font-size: 0.75rem;
+    color: var(--gray-600);
+    margin-top: 4px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.5rem;">
+  <div style="display:flex; align-items:center; gap:6px; font-size:0.78rem;">
+    <a href="{{ url_for('dashboard.index') }}" style="color:var(--gray-500); text-decoration:none; display:flex; align-items:center; gap:3px;">
+      <i class="ti ti-home" style="font-size:0.8rem;"></i> Dashboard
+    </a>
+    <i class="ti ti-chevron-right" style="font-size:0.65rem; color:var(--gray-400);"></i>
+    <span style="color:var(--primary-dark); font-weight:600;">Resultados ZIP</span>
+  </div>
+  <a href="{{ url_for('calificacion.calificar') }}" class="btn-outline-custom">
+    <i class="ti ti-arrow-left"></i> Nueva calificación
+  </a>
+</div>
+
+{% set total = tareas|length %}
+{% set ns = namespace(suma=0, aprobados=0) %}
+{% for t in tareas %}
+  {% if t.calificacion and t.calificacion.nota_final is not none %}
+    {% set nota_max = t.rubrica.nota_maxima if t.rubrica else 10 %}
+    {% set ns.suma = ns.suma + (t.calificacion.nota_final / nota_max * 10) %}
+    {% if (t.calificacion.nota_final / nota_max * 10) >= 7 %}
+      {% set ns.aprobados = ns.aprobados + 1 %}
+    {% endif %}
+  {% endif %}
+{% endfor %}
+{% set promedio_batch = (ns.suma / total) if total > 0 else 0 %}
+
+<!-- Resumen estadístico -->
+<div class="stat-resumen">
+  <div class="stat-box-batch">
+    <div class="val">{{ total }}</div>
+    <div class="lbl">Archivos procesados</div>
+  </div>
+  <div class="stat-box-batch">
+    <div class="val" style="color:var(--primary);">{{ "%.1f"|format(promedio_batch) }}</div>
+    <div class="lbl">Promedio general (s/10)</div>
+  </div>
+  <div class="stat-box-batch">
+    <div class="val" style="color:#2E7D32;">{{ ns.aprobados }}</div>
+    <div class="lbl">Aprobados (≥7)</div>
+  </div>
+  <div class="stat-box-batch">
+    <div class="val" style="color:#C62828;">{{ total - ns.aprobados }}</div>
+    <div class="lbl">Reprobados</div>
+  </div>
+</div>
+
+<!-- Tabla de resultados -->
+<div class="card-premium" style="margin-bottom:1.5rem;">
+  <div class="card-header-premium" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+    <span style="font-weight:700; color:var(--primary-dark); display:flex; align-items:center; gap:8px;">
+      <i class="ti ti-file-zip" style="color:var(--gold);"></i>
+      Resultados individuales
+    </span>
+    <a href="{{ url_for('calificacion.calificar') }}" class="btn-primary-custom" style="padding:8px 16px; font-size:0.82rem;">
+      <i class="ti ti-plus"></i> Nueva calificación
+    </a>
+  </div>
+
+  <div style="overflow-x:auto;">
+    <table class="table-premium">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Estudiante</th>
+          <th>Materia</th>
+          <th>Nota obtenida</th>
+          <th>Nota s/10</th>
+          <th>Retroalimentación</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tarea in tareas %}
+        {% set nota_max = tarea.rubrica.nota_maxima if tarea.rubrica else 10 %}
+        {% set nota_val = tarea.calificacion.nota_final if tarea.calificacion and tarea.calificacion.nota_final is not none else none %}
+        {% set nota_10  = (nota_val / nota_max * 10) if nota_val is not none else none %}
+        <tr>
+          <td class="numero">{{ loop.index }}</td>
+          <td>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div style="width:32px; height:32px; border-radius:50%;
+                          background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+                          color:white; font-weight:700; font-size:0.72rem;
+                          display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                {{ tarea.estudiante_nombre[:2].upper() }}
+              </div>
+              <div>
+                <div style="font-weight:600; font-size:0.88rem;">{{ tarea.estudiante_nombre }}</div>
+                <div style="font-size:0.7rem; color:var(--gray-600);">{{ tarea.subida_en.strftime('%d/%m/%Y %H:%M') }}</div>
+              </div>
+            </div>
+          </td>
+          <td style="font-size:0.82rem; color:var(--gray-600);">{{ tarea.materia.nombre }}</td>
+
+          <!-- Nota sobre su máximo -->
+          <td>
+            {% if nota_val is not none %}
+            <span style="font-weight:700; font-size:0.95rem; color:var(--primary-dark);">
+              {{ "%.1f"|format(nota_val) }}
+              <span style="font-size:0.72rem; color:var(--gray-600); font-weight:400;">/ {{ nota_max | int if nota_max == nota_max | int else nota_max }}</span>
+            </span>
+            {% else %}
+            <span class="nota-sin-calificar">—</span>
+            {% endif %}
+          </td>
+
+          <!-- Nota escalada a /10 con badge de color -->
+          <td>
+            {% if nota_10 is not none %}
+              {% if nota_10 >= 8.5 %}
+                <span class="nota-excelente">{{ "%.1f"|format(nota_10) }}</span>
+              {% elif nota_10 >= 6.5 %}
+                <span class="nota-bueno">{{ "%.1f"|format(nota_10) }}</span>
+              {% elif nota_10 >= 5 %}
+                <span class="nota-regular">{{ "%.1f"|format(nota_10) }}</span>
+              {% else %}
+                <span class="nota-reprobado">{{ "%.1f"|format(nota_10) }}</span>
+              {% endif %}
+            {% else %}
+              <span class="nota-sin-calificar">—</span>
+            {% endif %}
+          </td>
+
+          <!-- Retroalimentación corta + colapsable larga -->
+          <td style="max-width:320px;">
+            {% if tarea.calificacion %}
+              {% if tarea.calificacion.retroalimentacion_corta %}
+              <div style="font-size:0.82rem; color:var(--primary-dark); font-weight:500; line-height:1.5; margin-bottom:4px;">
+                {{ tarea.calificacion.retroalimentacion_corta }}
+              </div>
+              {% endif %}
+              {% if tarea.calificacion.retroalimentacion %}
+              <div class="retro-preview" id="retro-{{ tarea.id }}"
+                   onclick="toggleRetro({{ tarea.id }})" style="max-height:0; margin-top:0;">
+                {{ tarea.calificacion.retroalimentacion }}
+              </div>
+              <button class="retro-toggle" onclick="toggleRetro({{ tarea.id }})" id="btn-retro-{{ tarea.id }}">
+                <i class="ti ti-chevron-down" id="icon-retro-{{ tarea.id }}"></i> Ver detalle
+              </button>
+              {% endif %}
+            {% else %}
+            <span style="color:var(--gray-400); font-size:0.8rem;">—</span>
+            {% endif %}
+          </td>
+
+          <td>
+            <a href="{{ url_for('calificacion.ver_resultado', tarea_id=tarea.id) }}"
+               class="btn-ver" style="white-space:nowrap;">
+              Ver <i class="ti ti-arrow-right"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Errores (si los hubo) -->
+{% if errores %}
+<div class="card-premium">
+  <div class="card-header-premium" style="background:linear-gradient(135deg,#FFEBEE,white); border-bottom-color:#F44336;">
+    <i class="ti ti-alert-circle" style="color:#C62828; margin-right:8px;"></i>
+    <strong style="color:#C62828;">Archivos con error ({{ errores|length }})</strong>
+  </div>
+  <div class="card-body-premium">
+    {% for err in errores %}
+    <div style="display:flex; align-items:flex-start; gap:8px; padding:8px 0;
+                border-bottom:1px solid var(--gray-200);">
+      <i class="ti ti-x" style="color:#C62828; flex-shrink:0; margin-top:2px;"></i>
+      <span style="font-size:0.85rem; color:var(--gray-700);">{{ err }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Acciones finales -->
+<div style="display:flex; gap:1rem; justify-content:flex-end; margin-top:1.5rem; flex-wrap:wrap;">
+  <a href="{{ url_for('calificacion.historial') }}" class="btn-outline-custom">
+    <i class="ti ti-history"></i> Ver historial
+  </a>
+  <a href="{{ url_for('calificacion.exportar_excel') }}"
+     style="display:inline-flex; align-items:center; gap:6px; padding:9px 18px;
+            background:#1B5E20; color:white; border-radius:var(--radius-md);
+            font-size:0.85rem; font-weight:600; text-decoration:none;">
+    <i class="ti ti-file-spreadsheet"></i> Exportar Excel
+  </a>
+  <a href="{{ url_for('calificacion.calificar') }}" class="btn-primary-custom">
+    <i class="ti ti-plus"></i> Nueva calificación
+  </a>
+</div>
+
+<script>
+function toggleRetro(id) {
+  const div  = document.getElementById('retro-' + id);
+  const btn  = document.getElementById('btn-retro-' + id);
+  const icon = document.getElementById('icon-retro-' + id);
+  const exp  = div.classList.toggle('expanded');
+  btn.innerHTML  = (exp ? '<i class="ti ti-chevron-up" id="icon-retro-' + id + '"></i> Ver menos'
+                        : '<i class="ti ti-chevron-down" id="icon-retro-' + id + '"></i> Ver más');
+}
+</script>
+{% endblock %}

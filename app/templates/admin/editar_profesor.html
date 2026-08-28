@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}Editar Profesor – Admin{% endblock %}
+{% block page_title %}Editar Profesor{% endblock %}
+{% block page_subtitle %}Modificar datos de {{ profesor.nombre }}{% endblock %}
+
+{% block content %}
+<div class="form-container">
+  <div class="form-card">
+    <div class="card-premium">
+      <div class="card-header-premium">
+        <span style="font-weight:700; color:var(--primary-dark); display:flex; align-items:center; gap:8px;">
+          <i class="ti ti-edit" style="color:var(--gold);"></i>
+          Editar datos del profesor
+        </span>
+      </div>
+      <div class="card-body-premium">
+        <form method="POST" action="{{ url_for('admin.editar_profesor', id=profesor.id) }}">
+          <div class="form-group-modern">
+            <label>
+              <i class="ti ti-user" style="margin-right:6px;"></i>
+              Nombre completo <span class="required">*</span>
+            </label>
+            <input type="text" name="nombre" value="{{ profesor.nombre }}" required>
+          </div>
+
+          <div class="form-group-modern">
+            <label>
+              <i class="ti ti-mail" style="margin-right:6px;"></i>
+              Correo institucional <span class="required">*</span>
+            </label>
+            <input type="email" name="correo" value="{{ profesor.correo }}" required>
+          </div>
+
+          <div class="form-group-modern">
+            <label>
+              <i class="ti ti-lock" style="margin-right:6px;"></i>
+              Nueva contraseña
+            </label>
+            <input type="password" name="password" placeholder="Dejar en blanco para no cambiar" minlength="6">
+            <span class="form-hint">Solo completa este campo si deseas cambiar la contraseña.</span>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary-custom">
+              <i class="ti ti-device-floppy"></i>
+              Guardar cambios
+            </button>
+            <a href="{{ url_for('admin.index') }}" class="btn-cancelar">
+              <i class="ti ti-x"></i>
+              Cancelar
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,1111 @@
+{% extends "base.html" %}
+
+{% block page_title %}Calificar con Gemini AI{% endblock %}
+{% block page_subtitle %}Evaluación automática usando inteligencia avanzada{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ── Pasos ── */
+  .pasos-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: 2rem;
+    padding: 1.5rem 2rem;
+    background: var(--gray-50);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--gray-200);
+    position: relative;
+  }
+  .paso-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    border-radius: var(--radius-md);
+    background: white;
+    border: 2px solid var(--gray-200);
+    color: var(--gray-500);
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 1;
+    cursor: default;
+  }
+  .paso-item .paso-numero {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--gray-200);
+    color: var(--gray-500);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    transition: all 0.3s ease;
+  }
+  .paso-item.active {
+    border-color: var(--primary);
+    color: var(--primary-dark);
+    background: var(--primary-soft);
+    box-shadow: var(--shadow-sm);
+  }
+  .paso-item.active .paso-numero {
+    background: var(--primary);
+    color: white;
+  }
+  .paso-item.completed {
+    border-color: #2E7D32;
+    color: #2E7D32;
+    background: #E8F5E9;
+  }
+  .paso-item.completed .paso-numero {
+    background: #2E7D32;
+    color: white;
+  }
+  .paso-conector {
+    flex: 1;
+    height: 3px;
+    background: var(--gray-200);
+    margin: 0 4px;
+    min-width: 30px;
+    transition: background 0.3s ease;
+  }
+  .paso-conector.completed {
+    background: #2E7D32;
+  }
+  .paso-conector.active {
+    background: var(--primary);
+  }
+
+  /* ── Contenido de pasos ── */
+  .paso-contenido {
+    display: none;
+    animation: fadeIn 0.3s ease;
+  }
+  .paso-contenido.active {
+    display: block;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Tarjeta de tarea existente ── */
+  .tarea-card {
+    background: white;
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .tarea-card:hover {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+  }
+  .tarea-card.selected {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+    box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.2);
+  }
+  .tarea-card .tarea-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .tarea-card .tarea-nombre {
+    font-weight: 600;
+    color: var(--gray-800);
+    font-size: 0.95rem;
+  }
+  .tarea-card .tarea-meta {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 0.78rem;
+    color: var(--gray-600);
+  }
+  .tarea-card .tarea-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .tarea-card .tarea-accion {
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 0.82rem;
+  }
+
+  /* ── Botón de crear nueva ── */
+  .btn-crear-tarea {
+    width: 100%;
+    padding: 1rem;
+    border: 2px dashed var(--gray-300);
+    border-radius: var(--radius-md);
+    background: var(--gray-50);
+    color: var(--gray-600);
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .btn-crear-tarea:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--primary-soft);
+  }
+
+  /* ── Lista de tareas ── */
+  .tareas-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .tareas-lista::-webkit-scrollbar {
+    width: 6px;
+  }
+  .tareas-lista::-webkit-scrollbar-track {
+    background: var(--gray-100);
+    border-radius: 3px;
+  }
+  .tareas-lista::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: 3px;
+  }
+
+  /* ── Formulario nueva tarea ── */
+  .form-nueva-tarea {
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    border: 1px solid var(--gray-200);
+    margin-top: 1rem;
+  }
+  .form-nueva-tarea .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  .form-nueva-tarea .form-group-modern {
+    margin-bottom: 0;
+  }
+
+  /* ── Modo de entrega ── */
+  .modo-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .modo-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: var(--radius-md);
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 2px solid var(--gray-200);
+    background: white;
+    color: var(--gray-600);
+    transition: all 0.2s ease;
+  }
+
+  .modo-tab:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+
+  .modo-tab.active {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    border-color: transparent;
+    color: white;
+    box-shadow: var(--shadow-md);
+  }
+
+  .modo-tab.active i { color: white; }
+
+  .modo-section { display: none; }
+  .modo-section.visible { display: block; }
+
+  .zip-hint {
+    background: var(--primary-soft);
+    border-left: 3px solid var(--primary);
+    padding: 10px 14px;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    font-size: 0.8rem;
+    color: var(--primary-dark);
+    margin-top: 10px;
+  }
+
+  .zip-hint i { margin-right: 5px; }
+
+  /* ── Upload zone ── */
+  .upload-zone-premium {
+    border: 2px dashed var(--gray-300);
+    border-radius: var(--radius-md);
+    padding: 2rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: var(--gray-50);
+  }
+  .upload-zone-premium:hover {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+  }
+
+  .btn-volver-paso {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: var(--gray-200);
+    color: var(--gray-700);
+    font-weight: 600;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-volver-paso:hover {
+    background: var(--gray-300);
+  }
+
+  @media (max-width: 768px) {
+    .pasos-container {
+      flex-direction: column;
+      gap: 8px;
+      padding: 1rem;
+    }
+    .paso-conector {
+      width: 3px;
+      height: 20px;
+      min-width: auto;
+    }
+    .form-nueva-tarea .form-row {
+      grid-template-columns: 1fr;
+    }
+    .tarea-card {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .modo-tabs {
+      justify-content: center;
+    }
+    .modo-tab {
+      font-size: 0.78rem;
+      padding: 8px 14px;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.5rem;">
+  <div style="display:flex; align-items:center; gap:6px; font-size:0.78rem;">
+    <a href="{{ url_for('dashboard.index') }}" style="color:var(--gray-500); text-decoration:none; display:flex; align-items:center; gap:3px;">
+      <i class="ti ti-home" style="font-size:0.8rem;"></i> Dashboard
+    </a>
+    <i class="ti ti-chevron-right" style="font-size:0.65rem; color:var(--gray-400);"></i>
+    <span style="color:var(--primary-dark); font-weight:600;">Calificar</span>
+  </div>
+  <a href="{{ url_for('dashboard.index') }}" class="btn-outline-custom">
+    <i class="ti ti-arrow-left"></i> Volver
+  </a>
+</div>
+
+<form method="POST" enctype="multipart/form-data" id="calificarForm">
+  <input type="hidden" name="modo" id="modo_input" value="individual">
+  <input type="hidden" name="materia_id" id="materia_id_input" value="">
+  <input type="hidden" name="rubrica_id" id="rubrica_id_input" value="">
+  <input type="hidden" name="enunciado" id="enunciado_input" value="">
+
+  <!-- 📍 PASOS -->
+  <div class="pasos-container" id="pasosContainer">
+    <div class="paso-item active" id="paso1">
+      <span class="paso-numero">1</span>
+      Materia
+    </div>
+    <div class="paso-conector" id="conector1"></div>
+    <div class="paso-item" id="paso2">
+      <span class="paso-numero">2</span>
+      Tarea / Rúbrica
+    </div>
+    <div class="paso-conector" id="conector2"></div>
+    <div class="paso-item" id="paso3">
+      <span class="paso-numero">3</span>
+      Entregar
+    </div>
+  </div>
+
+  <!-- ── PASO 1: Seleccionar Materia ── -->
+  <div class="paso-contenido active" id="pasoContenido1">
+    <div class="card-premium">
+      <div class="card-header-premium">
+        <i class="ti ti-school" style="font-size:1.2rem; margin-right:8px;"></i>
+        <strong>Seleccionar materia</strong>
+      </div>
+      <div class="card-body-premium">
+        <div class="form-group-modern">
+          <label>Elige la materia que deseas evaluar</label>
+          <select id="select_materia" class="form-control" style="padding:12px 16px; font-size:1rem;">
+            <option value="">Selecciona una materia...</option>
+            {% for m in materias %}
+            <option value="{{ m.id }}" data-nombre="{{ m.nombre }}">{{ m.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div style="margin-top:1.5rem; text-align:right;">
+          <button type="button" class="btn-primary-custom" id="btnPaso1" disabled>
+            <i class="ti ti-arrow-right"></i> Continuar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PASO 2: Seleccionar o Crear Tarea ── -->
+  <div class="paso-contenido" id="pasoContenido2">
+    <div class="card-premium">
+      <div class="card-header-premium" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <i class="ti ti-clipboard-list" style="font-size:1.2rem;"></i>
+          <strong>Seleccionar o crear tarea</strong>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn-volver-paso" onclick="irPaso(1)">
+            <i class="ti ti-arrow-left"></i> Volver
+          </button>
+        </div>
+      </div>
+      <div class="card-body-premium">
+
+        <!-- Lista de tareas existentes -->
+        <div id="listaTareasContainer">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+            <span style="font-weight:600; color:var(--gray-700);">
+              <i class="ti ti-list"></i> Tareas disponibles
+            </span>
+            <span id="materiaSeleccionadaLabel" style="font-size:0.82rem; color:var(--gray-500);"></span>
+          </div>
+          <div id="tareasLista" class="tareas-lista">
+            <div style="text-align:center; padding:2rem; color:var(--gray-500);">
+              <i class="ti ti-loader" style="font-size:2rem; display:block; margin-bottom:0.5rem;"></i>
+              Cargando tareas...
+            </div>
+          </div>
+        </div>
+
+        <!-- Botón crear nueva tarea -->
+        <button type="button" class="btn-crear-tarea" id="btnMostrarNuevaTarea" style="margin-top:1rem;">
+          <i class="ti ti-plus"></i> Crear nueva tarea con rúbrica
+        </button>
+
+        <!-- Formulario nueva tarea (oculto) -->
+        <div class="form-nueva-tarea" id="formNuevaTarea" style="display:none;">
+          <h4 style="margin:0 0 1rem 0; font-size:0.95rem; color:var(--gray-700);">
+            <i class="ti ti-file-plus" style="color:var(--primary);"></i> Nueva tarea
+          </h4>
+          <div class="form-row">
+            <div class="form-group-modern">
+              <label>Nombre de la tarea <span class="required">*</span></label>
+              <input type="text" id="nueva_tarea_nombre" placeholder="Ej: Ensayo final" class="form-control">
+            </div>
+            <div class="form-group-modern">
+              <label>Nota máxima <span class="required">*</span></label>
+              <input type="number" id="nueva_tarea_nota" value="10" min="0.5" max="100" step="0.5" class="form-control">
+            </div>
+          </div>
+          <div class="form-group-modern">
+            <label>Enunciado de la tarea <span class="required">*</span></label>
+            <textarea id="nueva_tarea_enunciado" rows="4" placeholder="Describe detalladamente qué se pide en la tarea..." class="form-control"></textarea>
+          </div>
+          <div class="form-group-modern">
+            <label>Contexto adicional</label>
+            <textarea id="nueva_tarea_contexto" rows="2" placeholder="Opcional: objetivos, instrucciones de entrega u otras aclaraciones para la IA." class="form-control"></textarea>
+          </div>
+          <div class="form-group-modern">
+            <label>Anexar documento fuente</label>
+            <input type="file" id="nueva_tarea_documento" accept=".pdf,.doc,.docx" class="form-control">
+            <small style="font-size:0.72rem; color:var(--gray-500);">Opcional. PDF o Word con el material base que la IA usará como contexto adicional al calificar.</small>
+          </div>
+          <div class="form-group-modern">
+            <label>Criterios de evaluación <span class="required">*</span> (deben sumar 100%)</label>
+            <div id="criteriosNuevos">
+              <div class="criterio-row-nuevo" style="display:grid; grid-template-columns:1fr 1fr 80px 36px; gap:8px; margin-bottom:8px;">
+                <input type="text" class="form-control" placeholder="Criterio" style="font-size:0.85rem;">
+                <input type="text" class="form-control" placeholder="Detalle" style="font-size:0.85rem;">
+                <input type="number" class="form-control" placeholder="%" min="1" max="100" style="font-size:0.85rem; text-align:center;" oninput="actualizarTotalNuevos()">
+                <button type="button" class="btn-remove" onclick="eliminarCriterioNuevo(this)" style="background:none; border:none; color:var(--gray-400); cursor:pointer; font-size:1.1rem;">
+                  <i class="ti ti-trash"></i>
+                </button>
+              </div>
+              <div class="criterio-row-nuevo" style="display:grid; grid-template-columns:1fr 1fr 80px 36px; gap:8px; margin-bottom:8px;">
+                <input type="text" class="form-control" placeholder="Criterio" style="font-size:0.85rem;">
+                <input type="text" class="form-control" placeholder="Detalle" style="font-size:0.85rem;">
+                <input type="number" class="form-control" placeholder="%" min="1" max="100" style="font-size:0.85rem; text-align:center;" oninput="actualizarTotalNuevos()">
+                <button type="button" class="btn-remove" onclick="eliminarCriterioNuevo(this)" style="background:none; border:none; color:var(--gray-400); cursor:pointer; font-size:1.1rem;">
+                  <i class="ti ti-trash"></i>
+                </button>
+              </div>
+              <div class="criterio-row-nuevo" style="display:grid; grid-template-columns:1fr 1fr 80px 36px; gap:8px; margin-bottom:8px;">
+                <input type="text" class="form-control" placeholder="Criterio" style="font-size:0.85rem;">
+                <input type="text" class="form-control" placeholder="Detalle" style="font-size:0.85rem;">
+                <input type="number" class="form-control" placeholder="%" min="1" max="100" style="font-size:0.85rem; text-align:center;" oninput="actualizarTotalNuevos()">
+                <button type="button" class="btn-remove" onclick="eliminarCriterioNuevo(this)" style="background:none; border:none; color:var(--gray-400); cursor:pointer; font-size:1.1rem;">
+                  <i class="ti ti-trash"></i>
+                </button>
+              </div>
+              <div class="criterio-row-nuevo" style="display:grid; grid-template-columns:1fr 1fr 80px 36px; gap:8px; margin-bottom:8px;">
+                <input type="text" class="form-control" placeholder="Criterio" style="font-size:0.85rem;">
+                <input type="text" class="form-control" placeholder="Detalle" style="font-size:0.85rem;">
+                <input type="number" class="form-control" placeholder="%" min="1" max="100" style="font-size:0.85rem; text-align:center;" oninput="actualizarTotalNuevos()">
+                <button type="button" class="btn-remove" onclick="eliminarCriterioNuevo(this)" style="background:none; border:none; color:var(--gray-400); cursor:pointer; font-size:1.1rem;">
+                  <i class="ti ti-trash"></i>
+                </button>
+              </div>
+            </div>
+            <button type="button" class="btn-add" onclick="agregarCriterioNuevo()" style="margin-top:8px; padding:6px 16px; border-radius:var(--radius-sm); border:1px dashed var(--primary); background:none; color:var(--primary); cursor:pointer; font-weight:600; font-size:0.82rem;">
+              <i class="ti ti-plus"></i> Agregar criterio
+            </button>
+            <div style="margin-top:8px; text-align:right;">
+              Total: <strong id="totalNuevos">0%</strong>
+              <span id="totalNuevosStatus" style="margin-left:8px; font-size:0.78rem;"></span>
+            </div>
+          </div>
+          <div style="display:flex; gap:10px; margin-top:1.5rem; flex-wrap:wrap;">
+            <button type="button" class="btn-primary-custom" id="btnGuardarNuevaTarea">
+              <i class="ti ti-check"></i> Guardar tarea y continuar
+            </button>
+            <button type="button" class="btn-cancelar" onclick="document.getElementById('formNuevaTarea').style.display='none'; document.getElementById('btnMostrarNuevaTarea').style.display='block';">
+              <i class="ti ti-x"></i> Cancelar
+            </button>
+          </div>
+        </div>
+
+        <div style="margin-top:1.5rem; text-align:right; border-top:1px solid var(--gray-200); padding-top:1.5rem;">
+          <button type="button" class="btn-primary-custom" id="btnPaso2" disabled>
+            <i class="ti ti-arrow-right"></i> Continuar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PASO 3: Modo de entrega ── -->
+  <div class="paso-contenido" id="pasoContenido3">
+    <div class="card-premium">
+      <div class="card-header-premium" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <i class="ti ti-upload" style="font-size:1.2rem;"></i>
+          <strong>Modo de calificación</strong>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn-volver-paso" onclick="irPaso(2)">
+            <i class="ti ti-arrow-left"></i> Volver
+          </button>
+        </div>
+      </div>
+      <div class="card-body-premium">
+
+        <!-- Resumen de lo seleccionado -->
+        <div style="background:var(--primary-soft); border-radius:var(--radius-sm); padding:10px 14px; margin-bottom:1.5rem; display:flex; flex-wrap:wrap; gap:1rem; font-size:0.85rem;">
+          <span><strong>📚 Materia:</strong> <span id="resumenMateria">-</span></span>
+          <span><strong>📋 Tarea:</strong> <span id="resumenTarea">-</span></span>
+        </div>
+
+        <!-- Pestañas de modo -->
+        <div class="modo-tabs">
+          <button type="button" class="modo-tab active" id="tab-individual" onclick="setModo('individual')">
+            <i class="ti ti-file-text"></i> Archivo individual
+          </button>
+          <button type="button" class="modo-tab" id="tab-zip" onclick="setModo('zip')">
+            <i class="ti ti-file-zip"></i> ZIP masivo
+          </button>
+          <button type="button" class="modo-tab" id="tab-texto" onclick="setModo('texto')">
+            <i class="ti ti-align-left"></i> Texto libre
+          </button>
+        </div>
+
+        <!-- ── Modo: archivo individual ── -->
+        <div class="modo-section visible" id="section-individual">
+          <div class="zip-hint" style="margin-bottom:1rem;">
+            <i class="ti ti-sparkles"></i>
+            <strong>Extracción automática:</strong> Gemini AI detectará el nombre del estudiante desde el documento.
+          </div>
+
+          <div class="upload-zone-premium" onclick="document.getElementById('archivo_input').click()">
+            <i class="ti ti-cloud-upload" style="font-size:40px; color:var(--primary); margin-bottom:10px; display:block;"></i>
+            <p style="font-weight:600; margin-bottom:6px;">Haz clic para subir el archivo</p>
+            <p style="font-size:0.78rem; color:var(--gray-600);">PDF, DOC o DOCX · Máximo 10 MB</p>
+            <div id="nombre-archivo" style="margin-top:10px; font-size:0.85rem; color:var(--primary); font-weight:500;"></div>
+          </div>
+          <input type="file" id="archivo_input" name="archivo" accept=".pdf,.doc,.docx"
+                 style="display:none" onchange="mostrarNombre(this,'nombre-archivo')">
+        </div>
+
+        <!-- ── Modo: ZIP masivo ── -->
+        <div class="modo-section" id="section-zip">
+          <div class="zip-hint">
+            <i class="ti ti-sparkles"></i>
+            <strong>Extracción automática:</strong> Gemini AI detectará el nombre de cada estudiante directamente desde el contenido de cada archivo.<br>
+            <span style="margin-top:4px; display:block; opacity:.85;">
+              Sube un ZIP con un PDF o Word por alumno. Los nombres se extraen del documento.
+            </span>
+          </div>
+
+          <div class="upload-zone-premium" style="margin-top:1rem;"
+               onclick="document.getElementById('zip_input').click()">
+            <i class="ti ti-file-zip" style="font-size:40px; color:var(--primary); margin-bottom:10px; display:block;"></i>
+            <p style="font-weight:600; margin-bottom:6px;">Haz clic para subir el ZIP</p>
+            <p style="font-size:0.78rem; color:var(--gray-600);">Solo archivos .zip · Puede contener múltiples PDFs y DOCXs</p>
+            <div id="nombre-zip" style="margin-top:10px; font-size:0.85rem; color:var(--primary); font-weight:500;"></div>
+          </div>
+          <input type="file" id="zip_input" name="archivo_zip" accept=".zip"
+                 style="display:none" onchange="mostrarNombre(this,'nombre-zip')">
+
+          <div style="background:var(--gold-light); border-left:3px solid var(--gold-dark);
+                      padding:10px 14px; border-radius:0 var(--radius-sm) var(--radius-sm) 0;
+                      font-size:0.78rem; color:var(--gray-800); margin-top:1rem;">
+            <i class="ti ti-clock" style="color:var(--gold-dark); margin-right:5px;"></i>
+            El proceso puede tardar varios minutos según la cantidad de archivos.
+            No cierres esta ventana.
+          </div>
+        </div>
+
+        <!-- ── Modo: texto libre ── -->
+        <div class="modo-section" id="section-texto">
+          <div class="zip-hint" style="margin-bottom:1rem;">
+            <i class="ti ti-sparkles"></i>
+            <strong>Extracción automática:</strong> Gemini AI detectará el nombre del estudiante desde el texto pegado.
+          </div>
+          <div class="form-group-modern">
+            <label><i class="ti ti-align-left" style="margin-right:6px;"></i>Respuesta del estudiante</label>
+            <textarea name="texto_respuesta" id="texto_respuesta" rows="10"
+                      placeholder="Pega aquí el texto de la respuesta del estudiante..."
+                      style="resize:vertical;"></textarea>
+            <span class="form-hint">Copia y pega directamente desde el documento del estudiante. Incluye encabezados con el nombre si es posible.</span>
+          </div>
+        </div>
+
+        <!-- Botón enviar -->
+        <div style="margin-top:1.5rem;">
+          <button type="submit" id="btnCalificar" class="btn-primary-custom" style="width:100%; justify-content:center;">
+            <i class="ti ti-robot"></i>
+            <span id="btn-texto">Calificar con Gemini AI</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</form>
+
+<!-- Modal de carga -->
+<div id="loadingModal" class="loading-modal" style="display:none;">
+  <div class="loading-content">
+    <div style="position:relative; width:80px; height:80px; margin:0 auto 1rem;">
+      <div class="loading-icon" style="position:relative; z-index:1;">
+        <i class="ti ti-robot"></i>
+      </div>
+      <div class="loading-spinner" style="position:absolute; top:0; left:0;"></div>
+    </div>
+    <h3 id="loading-title">Gemini AI está analizando la tarea</h3>
+    <p id="loading-subtitle">Por favor espera, esto puede tomar unos segundos...</p>
+    <div class="loading-steps" id="loading-steps-individual">
+      <div class="step" id="step1"><i class="ti ti-file-analytics"></i><span>Leyendo el archivo del estudiante</span></div>
+      <div class="step" id="step2"><i class="ti ti-clipboard-list"></i><span>Aplicando criterios de la rúbrica</span></div>
+      <div class="step" id="step3"><i class="ti ti-chart-line"></i><span>Generando calificación y retroalimentación</span></div>
+    </div>
+    <div class="loading-steps" id="loading-steps-zip" style="display:none;">
+      <div class="step active"><i class="ti ti-file-zip"></i><span>Extrayendo archivos del ZIP</span></div>
+      <div class="step active"><i class="ti ti-users"></i><span>Calificando cada estudiante individualmente</span></div>
+      <div class="step active"><i class="ti ti-checklist"></i><span>Guardando resultados...</span></div>
+    </div>
+    <div class="loading-progress">
+      <div class="progress-bar-loading">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Variables globales ──
+let rubricasData = {};
+let tareaSeleccionadaId = null;
+let rubricaSeleccionadaId = null;
+let materiaIdSeleccionada = null;
+let materiaNombreSeleccionada = '';
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function mostrarNombre(input, targetId) {
+  const nombre = input.files[0]?.name || '';
+  document.getElementById(targetId).innerHTML = nombre
+    ? '<i class="ti ti-check"></i> ' + nombre : '';
+}
+
+// ── Navegación de pasos ──────────────────────────────────────────────────────
+
+function irPaso(paso) {
+  // Ocultar todos los contenidos
+  document.querySelectorAll('.paso-contenido').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.paso-item').forEach(el => el.classList.remove('active', 'completed'));
+  document.querySelectorAll('.paso-conector').forEach(el => el.classList.remove('active', 'completed'));
+
+  // Mostrar el paso seleccionado
+  document.getElementById('pasoContenido' + paso).classList.add('active');
+
+  // Marcar pasos
+  for (let i = 1; i <= 3; i++) {
+    const item = document.getElementById('paso' + i);
+    const conector = document.getElementById('conector' + i);
+    if (i < paso) {
+      item.classList.add('completed');
+      if (conector) conector.classList.add('completed');
+    } else if (i === paso) {
+      item.classList.add('active');
+      if (conector) conector.classList.add('active');
+    }
+  }
+
+  // Si es paso 2, cargar tareas
+  if (paso === 2 && materiaIdSeleccionada) {
+    cargarTareas(materiaIdSeleccionada);
+  }
+
+  // Si es paso 3, actualizar resumen
+  if (paso === 3) {
+    actualizarResumen();
+  }
+}
+
+// ── Paso 1: Seleccionar Materia ──────────────────────────────────────────────
+
+document.getElementById('select_materia').addEventListener('change', function() {
+  const btn = document.getElementById('btnPaso1');
+  if (this.value) {
+    btn.disabled = false;
+    materiaIdSeleccionada = this.value;
+    materiaNombreSeleccionada = this.options[this.selectedIndex].text;
+  } else {
+    btn.disabled = true;
+  }
+});
+
+document.getElementById('btnPaso1').addEventListener('click', function() {
+  if (materiaIdSeleccionada) {
+    document.getElementById('materiaSeleccionadaLabel').textContent = '📚 ' + materiaNombreSeleccionada;
+    irPaso(2);
+  }
+});
+
+// ── Paso 2: Tareas ──────────────────────────────────────────────────────────
+
+async function cargarTareas(materia_id) {
+  const lista = document.getElementById('tareasLista');
+  lista.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--gray-500);"><i class="ti ti-loader" style="font-size:2rem; display:block; margin-bottom:0.5rem;"></i>Cargando tareas...</div>';
+
+  try {
+    const res = await fetch(`/api/rubricas/${materia_id}`);
+    const data = await res.json();
+    rubricasData = {};
+
+    if (data.length === 0) {
+      lista.innerHTML = `
+        <div style="text-align:center; padding:2rem; color:var(--gray-500);">
+          <i class="ti ti-clipboard" style="font-size:2rem; display:block; margin-bottom:0.5rem;"></i>
+          No hay tareas disponibles para esta materia.<br>
+          <span style="font-size:0.85rem;">Crea una nueva tarea usando el botón de abajo.</span>
+        </div>
+      `;
+      return;
+    }
+
+    let html = '';
+    data.forEach((r, index) => {
+      rubricasData[r.id] = r;
+      const criteriosCount = r.criterios ? r.criterios.length : 0;
+      html += `
+        <div class="tarea-card" data-id="${r.id}" onclick="seleccionarTarea(${r.id})">
+          <div class="tarea-info">
+            <div class="tarea-nombre">${r.nombre}</div>
+            <div class="tarea-meta">
+              <span><i class="ti ti-list-check"></i> ${criteriosCount} criterios</span>
+              <span><i class="ti ti-trophy"></i> ${r.nota_maxima} pts</span>
+              ${r.enunciado ? `<span><i class="ti ti-file-description"></i> Tiene enunciado</span>` : `<span style="color:var(--gray-400);"><i class="ti ti-file-description"></i> Sin enunciado</span>`}
+            </div>
+          </div>
+          <div class="tarea-accion">
+            <i class="ti ti-chevron-right"></i> Seleccionar
+          </div>
+        </div>
+      `;
+    });
+    lista.innerHTML = html;
+
+    // Seleccionar la primera por defecto
+    if (data.length > 0) {
+      seleccionarTarea(data[0].id);
+    }
+
+  } catch (error) {
+    console.error('Error cargando tareas:', error);
+    lista.innerHTML = `<div style="text-align:center; padding:2rem; color:#C62828;"><i class="ti ti-alert-circle" style="font-size:2rem; display:block; margin-bottom:0.5rem;"></i>Error al cargar tareas: ${error.message}</div>`;
+  }
+}
+
+function seleccionarTarea(id) {
+  // Deseleccionar todas
+  document.querySelectorAll('.tarea-card').forEach(el => el.classList.remove('selected'));
+  // Seleccionar la actual
+  const card = document.querySelector(`.tarea-card[data-id="${id}"]`);
+  if (card) {
+    card.classList.add('selected');
+  }
+
+  tareaSeleccionadaId = id;
+  rubricaSeleccionadaId = id;
+  document.getElementById('btnPaso2').disabled = false;
+  document.getElementById('rubrica_id_input').value = id;
+  document.getElementById('enunciado_input').value = rubricasData[id]?.enunciado || '';
+}
+
+document.getElementById('btnPaso2').addEventListener('click', function() {
+  if (rubricaSeleccionadaId) {
+    irPaso(3);
+  }
+});
+
+// ── Crear nueva tarea ────────────────────────────────────────────────────────
+
+document.getElementById('btnMostrarNuevaTarea').addEventListener('click', function() {
+  this.style.display = 'none';
+  document.getElementById('formNuevaTarea').style.display = 'block';
+});
+
+function agregarCriterioNuevo() {
+  const container = document.getElementById('criteriosNuevos');
+  const div = document.createElement('div');
+  div.className = 'criterio-row-nuevo';
+  div.style.cssText = 'display:grid; grid-template-columns:1fr 1fr 80px 36px; gap:8px; margin-bottom:8px;';
+  div.innerHTML = `
+    <input type="text" class="form-control" placeholder="Criterio" style="font-size:0.85rem;">
+    <input type="text" class="form-control" placeholder="Detalle" style="font-size:0.85rem;">
+    <input type="number" class="form-control" placeholder="%" min="1" max="100" style="font-size:0.85rem; text-align:center;" oninput="actualizarTotalNuevos()">
+    <button type="button" class="btn-remove" onclick="eliminarCriterioNuevo(this)" style="background:none; border:none; color:var(--gray-400); cursor:pointer; font-size:1.1rem;">
+      <i class="ti ti-trash"></i>
+    </button>
+  `;
+  container.appendChild(div);
+  actualizarTotalNuevos();
+}
+
+function eliminarCriterioNuevo(btn) {
+  const filas = document.querySelectorAll('.criterio-row-nuevo');
+  if (filas.length > 1) {
+    btn.closest('.criterio-row-nuevo').remove();
+    actualizarTotalNuevos();
+  }
+}
+
+function actualizarTotalNuevos() {
+  const inputs = document.querySelectorAll('#criteriosNuevos input[type="number"]');
+  let total = 0;
+  inputs.forEach(inp => {
+    const val = parseInt(inp.value);
+    if (!isNaN(val)) total += val;
+  });
+  const el = document.getElementById('totalNuevos');
+  el.textContent = total + '%';
+  const status = document.getElementById('totalNuevosStatus');
+  if (total === 100) {
+    status.innerHTML = '✅ Correcto';
+    status.style.color = '#2E7D32';
+  } else if (total > 100) {
+    status.innerHTML = '⚠️ Excede 100%';
+    status.style.color = '#C62828';
+  } else {
+    status.innerHTML = `⏳ Faltan ${100 - total}%`;
+    status.style.color = '#E65100';
+  }
+}
+
+document.getElementById('btnGuardarNuevaTarea').addEventListener('click', async function() {
+  const nombre = document.getElementById('nueva_tarea_nombre').value.trim();
+  const nota = parseFloat(document.getElementById('nueva_tarea_nota').value);
+  const enunciado = document.getElementById('nueva_tarea_enunciado').value.trim();
+  const contexto = document.getElementById('nueva_tarea_contexto').value.trim();
+
+  if (!nombre) {
+    alert('⚠️ Ingresa el nombre de la tarea.');
+    return;
+  }
+  if (!enunciado) {
+    alert('⚠️ Ingresa el enunciado de la tarea.');
+    return;
+  }
+
+  // Obtener criterios
+  const filas = document.querySelectorAll('#criteriosNuevos .criterio-row-nuevo');
+  const criterios = [];
+  let total = 0;
+  filas.forEach(fila => {
+    const inputs = fila.querySelectorAll('input');
+    const nombreC = inputs[0].value.trim();
+    const detalle = inputs[1].value.trim();
+    const peso = parseInt(inputs[2].value) || 0;
+    if (nombreC) {
+      criterios.push({ nombre: nombreC, detalle: detalle, peso: peso });
+      total += peso;
+    }
+  });
+
+  if (criterios.length === 0) {
+    alert('⚠️ Agrega al menos un criterio de evaluación.');
+    return;
+  }
+  if (total !== 100) {
+    alert(`⚠️ Los pesos deben sumar 100%. Actualmente suman ${total}%.`);
+    return;
+  }
+
+  // Deshabilitar botón
+  const btn = this;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader"></i> Guardando...';
+
+  try {
+    const documentoInput = document.getElementById('nueva_tarea_documento');
+    const formData = new FormData();
+    formData.append('materia_id', materiaIdSeleccionada);
+    formData.append('nombre', nombre);
+    formData.append('nota_maxima', nota || 10);
+    formData.append('enunciado', enunciado);
+    formData.append('contexto_adicional', contexto);
+    formData.append('criterios', JSON.stringify(criterios));
+    if (documentoInput.files.length > 0) {
+      formData.append('documento_fuente', documentoInput.files[0]);
+    }
+
+    const res = await fetch('/api/rubricas/nueva', {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: formData
+    });
+
+    // Verificar si la respuesta es JSON
+    const textResponse = await res.text();
+    let data;
+    try {
+      data = JSON.parse(textResponse);
+    } catch (e) {
+      console.error('Respuesta no JSON:', textResponse);
+      alert('❌ Error del servidor. Revisa la consola para más detalles.');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-check"></i> Guardar tarea y continuar';
+      return;
+    }
+
+    if (res.ok && data.id) {
+      // Ocultar formulario
+      document.getElementById('formNuevaTarea').style.display = 'none';
+      document.getElementById('btnMostrarNuevaTarea').style.display = 'block';
+      
+      // Limpiar formulario
+      document.getElementById('nueva_tarea_nombre').value = '';
+      document.getElementById('nueva_tarea_nota').value = '10';
+      document.getElementById('nueva_tarea_enunciado').value = '';
+      document.getElementById('nueva_tarea_contexto').value = '';
+      document.getElementById('nueva_tarea_documento').value = '';
+
+      // Recargar tareas
+      await cargarTareas(materiaIdSeleccionada);
+      
+      // Seleccionar la nueva tarea
+      setTimeout(() => seleccionarTarea(data.id), 500);
+      
+      alert('✅ Tarea creada correctamente.');
+    } else {
+      const errorMsg = data?.error || 'Error desconocido';
+      alert('❌ Error al crear la tarea: ' + errorMsg);
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    alert('❌ Error al crear la tarea: ' + error.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-check"></i> Guardar tarea y continuar';
+  }
+});
+
+// ── Paso 3: Modo de entrega ──────────────────────────────────────────────────
+
+function actualizarResumen() {
+  document.getElementById('resumenMateria').textContent = materiaNombreSeleccionada || '-';
+  const rubrica = rubricasData[rubricaSeleccionadaId];
+  document.getElementById('resumenTarea').textContent = rubrica ? rubrica.nombre : '-';
+}
+
+function setModo(modo) {
+  document.getElementById('modo_input').value = modo;
+
+  ['individual','zip','texto'].forEach(m => {
+    document.getElementById('tab-' + m).classList.remove('active');
+    document.getElementById('section-' + m).classList.remove('visible');
+  });
+  document.getElementById('tab-' + modo).classList.add('active');
+  document.getElementById('section-' + modo).classList.add('visible');
+
+  const textos = {
+    individual: 'Calificar con Gemini AI',
+    zip:        'Calificar ZIP con Gemini AI',
+    texto:      'Calificar texto con Gemini AI'
+  };
+  document.getElementById('btn-texto').textContent = textos[modo];
+}
+
+// ── Envío del formulario ──────────────────────────────────────────────────────
+
+document.getElementById('calificarForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+
+  const modo = document.getElementById('modo_input').value;
+  const materia = materiaIdSeleccionada;
+  const rubrica = rubricaSeleccionadaId;
+
+  if (!materia || !rubrica) {
+    alert('Completa todos los pasos primero.');
+    return;
+  }
+
+  // Validar archivo
+  if (modo === 'individual') {
+    const archivo = document.getElementById('archivo_input').files[0];
+    if (!archivo) { alert('Sube un archivo PDF o Word.'); return; }
+  }
+
+  if (modo === 'zip') {
+    const zip = document.getElementById('zip_input').files[0];
+    if (!zip) { alert('Sube un archivo ZIP.'); return; }
+  }
+
+  if (modo === 'texto') {
+    const texto = document.getElementById('texto_respuesta').value.trim();
+    if (!texto) { alert('Pega el texto de la respuesta.'); return; }
+  }
+
+  // Actualizar campos ocultos
+  document.getElementById('materia_id_input').value = materia;
+  document.getElementById('rubrica_id_input').value = rubrica;
+  document.getElementById('enunciado_input').value = rubricasData[rubrica]?.enunciado || '';
+
+  // Mostrar modal
+  const modal = document.getElementById('loadingModal');
+  const isZip = modo === 'zip';
+  modal.style.display = 'flex';
+
+  document.getElementById('loading-steps-individual').style.display = isZip ? 'none' : 'block';
+  document.getElementById('loading-steps-zip').style.display = isZip ? 'block' : 'none';
+  document.getElementById('loading-title').textContent = isZip ? 'Procesando archivos del ZIP...' : 'Gemini AI está analizando la tarea';
+  document.getElementById('loading-subtitle').textContent = isZip
+    ? 'Cada archivo se califica individualmente. No cierres la ventana.'
+    : 'Por favor espera, esto puede tomar unos segundos...';
+
+  if (!isZip) {
+    setTimeout(() => { document.getElementById('step1').classList.add('active'); document.getElementById('progressFill').style.width = '25%'; }, 500);
+    setTimeout(() => { document.getElementById('step2').classList.add('active'); document.getElementById('progressFill').style.width = '55%'; }, 2000);
+    setTimeout(() => { document.getElementById('step3').classList.add('active'); document.getElementById('progressFill').style.width = '85%'; }, 3500);
+  } else {
+    let pct = 0;
+    const iv = setInterval(() => {
+      pct = Math.min(pct + 1, 90);
+      document.getElementById('progressFill').style.width = pct + '%';
+      if (pct >= 90) clearInterval(iv);
+    }, 800);
+  }
+
+  setTimeout(() => this.submit(), isZip ? 500 : 4500);
+});
+
+// ── Inicialización ──
+document.addEventListener('DOMContentLoaded', function() {
+  // Configurar paso 1 como activo
+  irPaso(1);
+});
+</script>
+
+<!-- ✅ Estilos adicionales para los nuevos elementos -->
+<style>
+  .form-control {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    background: white;
+    transition: border-color 0.2s;
+  }
+  .form-control:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+  }
+  .required {
+    color: #C62828;
+    font-weight: 700;
+  }
+  .btn-remove {
+    background: none;
+    border: none;
+    color: var(--gray-400);
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+  .btn-remove:hover {
+    color: #C62828;
+    background: #FFEBEE;
+  }
+  .btn-add {
+    padding: 6px 16px;
+    border-radius: var(--radius-sm);
+    border: 1px dashed var(--primary);
+    background: none;
+    color: var(--primary);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.82rem;
+    transition: all 0.2s;
+  }
+  .btn-add:hover {
+    background: var(--primary-soft);
+  }
+</style>
+{% endblock %}

@@ -1,0 +1,464 @@
+{% extends "base.html" %}
+
+{% block page_title %}Rúbricas · {{ materia.nombre }}{% endblock %}
+{% block page_subtitle %}{{ materia.nombre }}{% if materia.codigo %} · {{ materia.codigo }}{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ── Stats bar ── */
+  .rstats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .rstat-card {
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    padding: 1rem 1.25rem;
+    display: flex; align-items: center; gap: 12px;
+    border-left: 4px solid var(--primary);
+  }
+  .rstat-card.gold { border-left-color: var(--gold); }
+  .rstat-icon {
+    width: 44px; height: 44px;
+    border-radius: var(--radius-md);
+    background: var(--primary-soft); color: var(--primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; flex-shrink: 0;
+  }
+  .rstat-card.gold .rstat-icon { background: var(--gold-light); color: var(--gold-dark); }
+  .rstat-num { font-size: 1.6rem; font-weight: 800; color: var(--primary-dark); line-height: 1; }
+  .rstat-lbl { font-size: 0.73rem; color: var(--gray-600); margin-top: 2px; }
+
+  /* ── Rubrica accordion card ── */
+  .rub-card {
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 1rem;
+    border: 2px solid transparent;
+    overflow: hidden;
+    transition: border-color 0.25s, box-shadow 0.25s;
+  }
+  .rub-card.open {
+    border-color: var(--primary);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Cabecera */
+  .rub-header {
+    display: flex; align-items: center; gap: 14px;
+    padding: 1rem 1.25rem;
+    cursor: pointer; user-select: none;
+    background: linear-gradient(135deg, var(--primary-soft) 0%, white 60%);
+    transition: background 0.2s;
+  }
+  .rub-header:hover { background: linear-gradient(135deg, #d8eeda 0%, white 70%); }
+
+  .rub-avatar {
+    width: 46px; height: 46px;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white; font-size: 1.2rem;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; box-shadow: var(--shadow-sm);
+  }
+
+  .rub-info { flex: 1; min-width: 0; }
+  .rub-nombre {
+    font-weight: 700; font-size: 0.97rem; color: var(--primary-dark);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .rub-meta { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+  .rub-chip {
+    font-size: 0.7rem; color: var(--gray-600); background: var(--gray-100);
+    padding: 2px 8px; border-radius: 20px;
+    display: inline-flex; align-items: center; gap: 3px;
+  }
+  .rub-chip.gold { background: var(--gold-light); color: var(--gold-dark); font-weight: 600; }
+  .rub-chip.has-enunciado { background: #E3F2FD; color: #1565C0; }
+  .rub-chip.no-enunciado { background: #FFF3E0; color: #E65100; }
+
+  .rub-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+  .rbtn {
+    height: 34px; padding: 0 14px;
+    border-radius: var(--radius-sm);
+    border: none; cursor: pointer;
+    display: flex; align-items: center; gap: 5px;
+    font-size: 0.78rem; font-weight: 600;
+    text-decoration: none;
+    transition: all 0.18s;
+    white-space: nowrap;
+  }
+  .rbtn-edit { background: var(--gray-100); color: var(--gray-700); }
+  .rbtn-edit:hover { background: #E3F2FD; color: #1565C0; }
+  .rbtn-del  { background: var(--gray-100); color: var(--gray-700); }
+  .rbtn-del:hover  { background: #FFEBEE; color: #C62828; }
+
+  .rub-chevron {
+    font-size: 1.1rem; color: var(--gray-500);
+    transition: transform 0.3s ease, color 0.2s;
+    flex-shrink: 0;
+  }
+  .rub-card.open .rub-chevron { transform: rotate(180deg); color: var(--primary); }
+
+  /* Body expandible */
+  .rub-body {
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border-top: 1px solid transparent;
+  }
+  .rub-card.open .rub-body {
+    max-height: 3000px;
+    border-top-color: var(--gray-200);
+  }
+
+  /* Enunciado en la vista expandida */
+  .enunciado-preview {
+    padding: 12px 1.25rem;
+    background: var(--primary-soft);
+    border-bottom: 1px solid var(--gray-200);
+  }
+  .enunciado-preview .label {
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .enunciado-preview .label i {
+    color: var(--primary);
+  }
+  .enunciado-preview .texto {
+    font-size: 0.88rem;
+    color: var(--gray-800);
+    line-height: 1.6;
+  }
+  .enunciado-preview .sin-enunciado {
+    color: var(--gray-500);
+    font-style: italic;
+    font-size: 0.85rem;
+  }
+
+  /* Criterios */
+  .criterios-panel { padding: 0; }
+  .criterio-row-view {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 1.25rem;
+    border-bottom: 1px solid var(--gray-100);
+    transition: background 0.15s;
+  }
+  .criterio-row-view:last-child { border-bottom: none; }
+  .criterio-row-view:hover { background: var(--gray-50); }
+
+  .cr-num {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--primary-soft); color: var(--primary);
+    font-size: 0.72rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 2px;
+  }
+  .cr-body { flex: 1; min-width: 0; }
+  .cr-nombre-view { font-weight: 600; font-size: 0.88rem; color: var(--gray-800); }
+  .cr-detalle-view {
+    font-size: 0.78rem; color: var(--gray-600);
+    margin-top: 3px; line-height: 1.5;
+  }
+  .cr-right-view { text-align: right; flex-shrink: 0; }
+  .cr-pct {
+    font-size: 1rem; font-weight: 800; color: var(--primary-dark); line-height: 1;
+  }
+  .cr-pts-lbl {
+    font-size: 0.68rem; color: var(--gray-500); margin-top: 2px;
+  }
+
+  /* Footer de rúbrica */
+  .rub-footer {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 1.25rem;
+    background: var(--gray-50);
+    border-top: 1px solid var(--gray-200);
+    flex-wrap: wrap;
+  }
+  .rub-footer-item {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.78rem; color: var(--gray-600); font-weight: 500;
+  }
+  .rub-footer-val {
+    font-weight: 700; padding: 2px 10px; border-radius: 20px;
+    font-size: 0.78rem;
+  }
+  .rv-green { background: var(--primary-soft); color: var(--primary); }
+  .rv-gold  { background: var(--gold); color: var(--primary-dark); }
+  .rv-red   { background: #FFEBEE; color: #C62828; }
+
+  /* Empty state */
+  .empty-rubricas {
+    text-align: center; padding: 3.5rem 1rem;
+    background: white; border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+  }
+  .empty-rubricas i { font-size: 3rem; color: var(--gray-300); display: block; margin-bottom: 1rem; }
+
+  @media (max-width: 768px) {
+    .rstats { grid-template-columns: 1fr 1fr; }
+    .rub-actions .rbtn span { display: none; }
+    .rbtn { padding: 0 10px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap; gap:1rem;">
+  <div>
+    <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+      <a href="{{ url_for('dashboard.index') }}"
+         style="color:var(--gray-500); text-decoration:none; font-size:0.78rem; display:flex; align-items:center; gap:3px;">
+        <i class="ti ti-home" style="font-size:0.8rem;"></i> Dashboard
+      </a>
+      <i class="ti ti-chevron-right" style="font-size:0.65rem; color:var(--gray-400);"></i>
+      <span style="font-size:0.78rem; color:var(--primary-dark); font-weight:600;">{{ materia.nombre }}</span>
+      <i class="ti ti-chevron-right" style="font-size:0.65rem; color:var(--gray-400);"></i>
+      <span style="font-size:0.78rem; color:var(--gray-500);">Rúbricas</span>
+    </div>
+    <h1 style="font-size:1.3rem; font-weight:800; color:var(--primary-dark); margin:0;">
+      Rúbricas de evaluación
+    </h1>
+  </div>
+  <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    <a href="{{ url_for('dashboard.index') }}" class="btn-outline-custom">
+      <i class="ti ti-arrow-left"></i> Volver
+    </a>
+    <a href="{{ url_for('materias.nueva_rubrica', materia_id=materia.id) }}" class="btn-primary-custom">
+      <i class="ti ti-plus"></i> Nueva rúbrica
+    </a>
+  </div>
+</div>
+
+<!-- Stats -->
+{% set total_criterios = namespace(val=0) %}
+{% set peso_ok = namespace(count=0) %}
+{% for r in rubricas %}
+  {% set criterios = r.get_criterios() %}
+  {% set total_criterios.val = total_criterios.val + criterios|length %}
+  {% set total_peso = namespace(t=0) %}
+  {% for c in criterios %}{% set total_peso.t = total_peso.t + c.peso %}{% endfor %}
+  {% if total_peso.t == 100 %}{% set peso_ok.count = peso_ok.count + 1 %}{% endif %}
+{% endfor %}
+
+<div class="rstats">
+  <div class="rstat-card">
+    <div class="rstat-icon"><i class="ti ti-clipboard-list"></i></div>
+    <div>
+      <div class="rstat-num">{{ rubricas|length }}</div>
+      <div class="rstat-lbl">Rúbricas creadas</div>
+    </div>
+  </div>
+  <div class="rstat-card">
+    <div class="rstat-icon"><i class="ti ti-list-check"></i></div>
+    <div>
+      <div class="rstat-num">{{ total_criterios.val }}</div>
+      <div class="rstat-lbl">Criterios en total</div>
+    </div>
+  </div>
+  <div class="rstat-card gold">
+    <div class="rstat-icon"><i class="ti ti-check"></i></div>
+    <div>
+      <div class="rstat-num">{{ peso_ok.count }}</div>
+      <div class="rstat-lbl">Rúbricas al 100%</div>
+    </div>
+  </div>
+</div>
+
+<!-- Lista de rúbricas -->
+{% if rubricas %}
+  {% for r in rubricas %}
+  {% set criterios = r.get_criterios() %}
+  {% set total_peso = namespace(t=0) %}
+  {% for c in criterios %}{% set total_peso.t = total_peso.t + c.peso %}{% endfor %}
+  {% set peso_ok_r = total_peso.t == 100 %}
+
+  <div class="rub-card" id="rubcard-{{ r.id }}">
+
+    <!-- Cabecera -->
+    <div class="rub-header" data-rid="{{ r.id }}" onclick="toggleRub(this.dataset.rid)">
+      <div class="rub-avatar"><i class="ti ti-clipboard-list"></i></div>
+      <div class="rub-info">
+        <div class="rub-nombre" title="{{ r.nombre }}">{{ r.nombre }}</div>
+        <div class="rub-meta">
+          <span class="rub-chip">
+            <i class="ti ti-list-check"></i> {{ criterios|length }} criterio{% if criterios|length != 1 %}s{% endif %}
+          </span>
+          <span class="rub-chip gold">
+            <i class="ti ti-trophy"></i>
+            {{ r.nota_maxima | int if r.nota_maxima == r.nota_maxima | int else r.nota_maxima }} pts máx.
+          </span>
+          <!-- 🆕 Indicador de enunciado -->
+          {% if r.enunciado %}
+          <span class="rub-chip has-enunciado">
+            <i class="ti ti-file-description"></i> Tiene enunciado
+          </span>
+          {% else %}
+          <span class="rub-chip no-enunciado">
+            <i class="ti ti-file-description"></i> Sin enunciado
+          </span>
+          {% endif %}
+          {% if peso_ok_r %}
+          <span class="rub-chip" style="background:#E8F5E9; color:#2E7D32;">
+            <i class="ti ti-check"></i> Peso 100%
+          </span>
+          {% else %}
+          <span class="rub-chip" style="background:#FFEBEE; color:#C62828;">
+            <i class="ti ti-alert-circle"></i> Peso {{ total_peso.t }}%
+          </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="rub-actions" onclick="event.stopPropagation()">
+        <a href="{{ url_for('materias.editar_rubrica', id=r.id) }}"
+           class="rbtn rbtn-edit">
+          <i class="ti ti-edit"></i> <span>Editar</span>
+        </a>
+        <form method="POST" action="{{ url_for('materias.eliminar_rubrica', id=r.id) }}"
+              onsubmit="return confirm('¿Eliminar la rúbrica {{ r.nombre }}? Se eliminarán también las tareas asociadas.');"
+              style="display:inline;">
+          <button type="submit" class="rbtn rbtn-del">
+            <i class="ti ti-trash"></i> <span>Eliminar</span>
+          </button>
+        </form>
+      </div>
+
+      <i class="ti ti-chevron-down rub-chevron"></i>
+    </div>
+
+    <!-- Body expandido con ENUNCIADO + CRITERIOS -->
+    <div class="rub-body" id="rubbody-{{ r.id }}">
+      
+      <!-- 🆕 Sección de enunciado -->
+      <div class="enunciado-preview">
+        <div class="label">
+          <i class="ti ti-file-description"></i>
+          Enunciado de la tarea
+        </div>
+        {% if r.enunciado and r.enunciado.strip() %}
+          <div class="texto">{{ r.enunciado }}</div>
+        {% else %}
+          <div class="sin-enunciado">
+            <i class="ti ti-info-circle" style="margin-right: 4px;"></i>
+            Esta rúbrica no tiene un enunciado definido.
+            <a href="{{ url_for('materias.editar_rubrica', id=r.id) }}" style="color:var(--primary);">
+              Agregar enunciado →
+            </a>
+          </div>
+        {% endif %}
+      </div>
+
+      {% if r.contexto_adicional and r.contexto_adicional.strip() %}
+      <div class="enunciado-preview" style="background:white;">
+        <div class="label"><i class="ti ti-notes"></i> Contexto adicional</div>
+        <div class="texto">{{ r.contexto_adicional }}</div>
+      </div>
+      {% endif %}
+
+      {% if r.documento_fuente_nombre %}
+      <div class="enunciado-preview" style="background:white;">
+        <div class="label"><i class="ti ti-paperclip"></i> Documento fuente</div>
+        <div class="texto"><i class="ti ti-file-text" style="color:var(--primary); margin-right:4px;"></i>{{ r.documento_fuente_nombre }}</div>
+      </div>
+      {% endif %}
+
+      <!-- Sección de criterios -->
+      <div class="criterios-panel">
+        {% if criterios %}
+          {% for c in criterios %}
+          {% set pts_criterio = (c.peso * r.nota_maxima / 100) | round(2) %}
+          <div class="criterio-row-view">
+            <div class="cr-num">{{ loop.index }}</div>
+            <div class="cr-body">
+              <div class="cr-nombre-view">{{ c.nombre if c.nombre else c.criterio if c.criterio else 'Sin nombre' }}</div>
+              {% if c.detalle %}
+              <div class="cr-detalle-view">{{ c.detalle }}</div>
+              {% endif %}
+            </div>
+            <div class="cr-right-view">
+              <div class="cr-pct">{{ c.peso }}%</div>
+              <div class="cr-pts-lbl">{{ pts_criterio }} pts</div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div style="text-align:center; padding:1.5rem; color:var(--gray-500); font-size:0.85rem;">
+            <i class="ti ti-info-circle" style="margin-right:5px;"></i> Sin criterios definidos
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Footer -->
+      <div class="rub-footer">
+        <div class="rub-footer-item">
+          <i class="ti ti-chart-pie" style="color:var(--primary);"></i>
+          Peso total:
+          <span class="rub-footer-val {{ 'rv-green' if peso_ok_r else 'rv-red' }}">
+            {{ total_peso.t }}%
+          </span>
+        </div>
+        <div class="rub-footer-item">
+          <i class="ti ti-trophy" style="color:var(--gold-dark);"></i>
+          Nota máxima:
+          <span class="rub-footer-val rv-gold">
+            {{ r.nota_maxima | int if r.nota_maxima == r.nota_maxima | int else r.nota_maxima }} puntos
+          </span>
+        </div>
+        <div class="rub-footer-item" style="margin-left:auto; font-size:0.7rem; color:var(--gray-400);">
+          Creada {{ r.creado_en.strftime('%d/%m/%Y') if r.creado_en else '' }}
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /rub-card -->
+  {% endfor %}
+
+{% else %}
+  <div class="empty-rubricas">
+    <i class="ti ti-clipboard-list"></i>
+    <p style="font-size:1rem; font-weight:600; color:var(--gray-700); margin-bottom:0.5rem;">
+      No hay rúbricas para esta materia
+    </p>
+    <p style="font-size:0.85rem; margin-bottom:1.5rem;">
+      Crea la primera rúbrica para poder calificar tareas.
+    </p>
+    <a href="{{ url_for('materias.nueva_rubrica', materia_id=materia.id) }}" class="btn-primary-custom">
+      <i class="ti ti-plus"></i> Crear primera rúbrica
+    </a>
+  </div>
+{% endif %}
+
+<script>
+function toggleRub(id) {
+  const card = document.getElementById('rubcard-' + id);
+  const isOpen = card.classList.contains('open');
+
+  document.querySelectorAll('.rub-card.open').forEach(c => c.classList.remove('open'));
+
+  if (!isOpen) {
+    card.classList.add('open');
+    setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const cards = document.querySelectorAll('.rub-card');
+  if (cards.length === 1) cards[0].classList.add('open');
+});
+</script>
+{% endblock %}

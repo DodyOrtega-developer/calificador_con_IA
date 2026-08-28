@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block page_title %}Mi perfil{% endblock %}
+{% block page_subtitle %}Gestiona tu información personal y configuración de cuenta{% endblock %}
+
+{% block content %}
+<div class="grid-2">
+  <!-- Tarjeta de información personal -->
+  <div class="card-premium">
+    <div class="card-header-premium">
+      <i class="ti ti-user-circle" style="font-size: 1.2rem; margin-right: 8px;"></i>
+      <strong>Información personal</strong>
+    </div>
+    <div class="card-body-premium">
+      <form method="POST">
+        <div class="avatar-container">
+          <div class="avatar-perfil">
+            {{ current_user.nombre[:2].upper() }}
+          </div>
+          <div class="avatar-email">{{ current_user.correo }}</div>
+          <div class="avatar-rol">
+            <span class="tag-rol">{{ current_user.rol|capitalize }}</span>
+          </div>
+        </div>
+        
+        <div class="form-group-modern">
+          <label>
+            <i class="ti ti-user" style="margin-right: 6px;"></i>
+            Nombre completo
+          </label>
+          <input type="text" name="nombre" value="{{ current_user.nombre }}" required>
+        </div>
+        
+        <div class="form-group-modern">
+          <label>
+            <i class="ti ti-mail" style="margin-right: 6px;"></i>
+            Correo institucional
+          </label>
+          <input type="text" value="{{ current_user.correo }}" disabled class="input-disabled">
+        </div>
+
+        <div class="divider"></div>
+        
+        <div class="password-section">
+          <i class="ti ti-lock"></i>
+          <strong>Cambiar contraseña</strong>
+        </div>
+        
+        <div class="form-group-modern">
+          <label>Contraseña actual</label>
+          <input type="password" name="pw_actual" placeholder="Deja vacío si no cambias">
+        </div>
+        
+        <div class="form-group-modern">
+          <label>Nueva contraseña</label>
+          <input type="password" name="pw_nueva" placeholder="Mínimo 6 caracteres">
+        </div>
+        
+        <div class="form-group-modern">
+          <label>Confirmar nueva contraseña</label>
+          <input type="password" name="pw_confirmar">
+        </div>
+        
+        <button type="submit" class="btn-primary-custom" style="width: 100%; justify-content: center;">
+          <i class="ti ti-check"></i> Guardar cambios
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Tarjeta de resumen de actividad -->
+  <div>
+    <div class="card-premium" style="margin-bottom: 1.5rem;">
+      <div class="card-header-premium">
+        <i class="ti ti-chart-bar" style="font-size: 1.2rem; margin-right: 8px;"></i>
+        <strong>Resumen de actividad</strong>
+      </div>
+      <div class="card-body-premium">
+        <div class="actividad-list">
+          <div class="actividad-item">
+            <span><i class="ti ti-calendar"></i> Miembro desde</span>
+            <strong>{{ current_user.creado_en.strftime('%d/%m/%Y') }}</strong>
+          </div>
+          <div class="actividad-item">
+            <span><i class="ti ti-books"></i> Materias registradas</span>
+            <strong>{{ current_user.materias|length }}</strong>
+          </div>
+          <div class="actividad-item">
+            <span><i class="ti ti-checklist"></i> Tareas calificadas</span>
+            <strong>{{ total_tareas|default(0) }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Tarjeta de consejos -->
+    <div class="card-premium">
+      <div class="card-header-premium">
+        <i class="ti ti-lightbulb" style="font-size: 1.2rem; margin-right: 8px;"></i>
+        <strong>Consejos útiles</strong>
+      </div>
+      <div class="card-body-premium">
+        <ul class="tips-list">
+          <li><i class="ti ti-check"></i> Mantén tu perfil actualizado</li>
+          <li><i class="ti ti-check"></i> Usa contraseñas seguras</li>
+          <li><i class="ti ti-check"></i> Revisa tu historial de calificaciones</li>
+          <li><i class="ti ti-check"></i> Exporta reportes para tu registro</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

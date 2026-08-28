@@ -1,0 +1,503 @@
+{% extends "base.html" %}
+
+{% block page_title %}Historial de calificaciones{% endblock %}
+{% block page_subtitle %}Todas las tareas calificadas con Gemini AI{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ── Filtros ── */
+  .filtros-container {
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: flex-end;
+    border: 1px solid var(--gray-200);
+  }
+  .filtros-container .filtro-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 180px;
+  }
+  .filtros-container .filtro-group label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--gray-600);
+  }
+  .filtros-container .filtro-group select,
+  .filtros-container .filtro-group input {
+    padding: 8px 12px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    background: white;
+    transition: border-color 0.2s;
+  }
+  .filtros-container .filtro-group select:focus,
+  .filtros-container .filtro-group input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+  }
+  .filtros-container .filtro-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .btn-filtro {
+    padding: 8px 20px;
+    border-radius: var(--radius-sm);
+    border: none;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+  }
+  .btn-filtro-primary {
+    background: var(--primary);
+    color: white;
+  }
+  .btn-filtro-primary:hover {
+    background: var(--primary-dark);
+  }
+  .btn-filtro-secondary {
+    background: var(--gray-200);
+    color: var(--gray-700);
+  }
+  .btn-filtro-secondary:hover {
+    background: var(--gray-300);
+  }
+
+  /* ── Tabla ── */
+  .table-premium {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  .table-premium thead {
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+    color: white;
+  }
+  .table-premium thead th {
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .table-premium tbody tr {
+    border-bottom: 1px solid var(--gray-100);
+    transition: background 0.15s;
+  }
+  .table-premium tbody tr:hover {
+    background: var(--primary-soft);
+  }
+  .table-premium tbody td {
+    padding: 10px 16px;
+    vertical-align: middle;
+  }
+  .table-premium .numero {
+    font-weight: 700;
+    color: var(--gray-500);
+    width: 40px;
+    text-align: center;
+  }
+  .table-premium .nombre-estudiante {
+    font-weight: 600;
+    color: var(--gray-800);
+  }
+  .btn-editar-nombre {
+    background: none;
+    border: none;
+    color: var(--gray-300);
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 2px 4px;
+    margin-left: 4px;
+    border-radius: 4px;
+    vertical-align: middle;
+    transition: all 0.15s;
+  }
+  .btn-editar-nombre:hover {
+    color: var(--primary);
+    background: var(--primary-soft);
+  }
+
+  /* ── Notas ── */
+  .nota-ia {
+    background: var(--gray-100);
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.82rem;
+  }
+  .nota-excelente {
+    background: #C8E6C9;
+    color: #1B5E20;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.82rem;
+  }
+  .nota-bueno {
+    background: #FFF9C4;
+    color: #F57F17;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.82rem;
+  }
+  .nota-regular {
+    background: #FFE0B2;
+    color: #E65100;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.82rem;
+  }
+  .nota-reprobado {
+    background: #FFCDD2;
+    color: #C62828;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.82rem;
+  }
+  .nota-vacia {
+    color: var(--gray-400);
+    font-style: italic;
+  }
+
+  /* ── Botones de acción ── */
+  .btn-ver {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    border-radius: var(--radius-sm);
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  .btn-ver:hover {
+    background: var(--primary);
+    color: white;
+  }
+  .btn-eliminar-tarea {
+    background: none;
+    border: none;
+    color: var(--gray-400);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+  .btn-eliminar-tarea:hover {
+    color: #C62828;
+    background: #FFEBEE;
+  }
+
+  /* ── Resumen ── */
+  .resumen-historial {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 12px 1.25rem;
+    background: var(--gray-50);
+    border-top: 1px solid var(--gray-200);
+    font-size: 0.82rem;
+    color: var(--gray-600);
+  }
+  .resumen-historial strong {
+    color: var(--primary-dark);
+  }
+  .resumen-historial i {
+    margin-right: 4px;
+  }
+
+  /* ── Empty state ── */
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--gray-500);
+  }
+  .empty-state i {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 1rem;
+    color: var(--gray-300);
+  }
+  .empty-state p {
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .filtros-container {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .filtros-container .filtro-group {
+      min-width: auto;
+    }
+    .filtros-container .filtro-actions {
+      flex-wrap: wrap;
+    }
+    .filtros-container .filtro-actions .btn-filtro {
+      flex: 1;
+      justify-content: center;
+    }
+    .table-premium {
+      font-size: 0.78rem;
+    }
+    .table-premium thead th,
+    .table-premium tbody td {
+      padding: 8px 10px;
+    }
+    .resumen-historial {
+      flex-direction: column;
+      text-align: center;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card-premium">
+  <div class="card-header-premium" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+    <span style="display:flex; align-items:center; gap:8px;">
+      <i class="ti ti-history" style="font-size:1.2rem;"></i>
+      <strong>Listado de tareas evaluadas</strong>
+    </span>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <!-- 🔧 Enlace de exportación con filtros -->
+      <a href="#" id="btnExportarExcel"
+         style="display:inline-flex; align-items:center; gap:6px; padding:7px 16px;
+                background:#1B5E20; color:white; border-radius:8px; font-size:0.82rem;
+                font-weight:600; text-decoration:none; transition:background 0.2s;"
+         onmouseover="this.style.background='#2E7D32'" onmouseout="this.style.background='#1B5E20'">
+        <i class="ti ti-file-spreadsheet"></i> Exportar Excel
+      </a>
+      <a href="{{ url_for('calificacion.calificar') }}" class="btn-primary-custom" style="padding:7px 16px; font-size:0.82rem;">
+        <i class="ti ti-plus"></i> Nueva calificación
+      </a>
+    </div>
+  </div>
+  <div class="card-body-premium" style="padding: 0;">
+
+    <!-- 🔍 FILTROS -->
+    <div class="filtros-container">
+      <form method="GET" action="{{ url_for('calificacion.historial') }}" style="display:contents; width:100%;" id="filtrosForm">
+        <div class="filtro-group">
+          <label for="materia_filtro"><i class="ti ti-school"></i> Materia</label>
+          <select name="materia" id="materia_filtro" onchange="actualizarEnlaceExportar()">
+            <option value="">Todas las materias</option>
+            {% for m in materias %}
+            <option value="{{ m.id }}" {% if materia_seleccionada == m.id|string %}selected{% endif %}>
+              {{ m.nombre }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="filtro-group">
+          <label for="busqueda"><i class="ti ti-search"></i> Buscar por tarea</label>
+          <input type="text" name="busqueda" id="busqueda" 
+                 placeholder="Nombre de la tarea o estudiante..." 
+                 value="{{ busqueda if busqueda else '' }}"
+                 oninput="actualizarEnlaceExportar()">
+          <small style="font-size:0.7rem; color:var(--gray-500);">Busca por nombre de tarea o estudiante</small>
+        </div>
+        <div class="filtro-actions">
+          <button type="submit" class="btn-filtro btn-filtro-primary">
+            <i class="ti ti-filter"></i> Filtrar
+          </button>
+          <a href="{{ url_for('calificacion.historial') }}" class="btn-filtro btn-filtro-secondary">
+            <i class="ti ti-x"></i> Limpiar
+          </a>
+        </div>
+      </form>
+    </div>
+
+    <!-- 📊 TABLA DE RESULTADOS -->
+    {% if tareas %}
+    <div style="overflow-x: auto;">
+      <table class="table-premium">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Estudiante</th>
+            <th>Tarea</th>
+            <th>Materia</th>
+            <th>Nota IA</th>
+            <th>Nota Final</th>
+            <th>Fecha</th>
+            <th colspan="2"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in tareas %}
+          <tr>
+            <td class="numero">{{ loop.index }}</td>
+            <td class="nombre-estudiante">
+              {{ t.estudiante_nombre }}
+              <button type="button" class="btn-editar-nombre" title="Corregir nombre"
+                      onclick="corregirNombre({{ t.id }}, {{ t.estudiante_nombre|tojson }})">
+                <i class="ti ti-pencil"></i>
+              </button>
+            </td>
+            <td>
+              {% if t.rubrica %}
+                <span style="font-weight:500; color:var(--gray-700);">{{ t.rubrica.nombre }}</span>
+              {% else %}
+                <span class="nota-vacia">—</span>
+              {% endif %}
+            </td>
+            <td>{{ t.materia.nombre }}</td>
+            <td>
+              {% if t.calificacion %}
+                <span class="nota-ia">{{ "%.1f"|format(t.calificacion.nota_ia) }}</span>
+              {% else %}
+                <span class="nota-vacia">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if t.calificacion %}
+                {% set nota = t.calificacion.nota_final %}
+                {% if nota >= 8.5 %}
+                  <span class="nota-excelente">{{ "%.1f"|format(nota) }}</span>
+                {% elif nota >= 6.5 %}
+                  <span class="nota-bueno">{{ "%.1f"|format(nota) }}</span>
+                {% elif nota >= 5 %}
+                  <span class="nota-regular">{{ "%.1f"|format(nota) }}</span>
+                {% else %}
+                  <span class="nota-reprobado">{{ "%.1f"|format(nota) }}</span>
+                {% endif %}
+              {% else %}
+                <span class="nota-vacia">—</span>
+              {% endif %}
+            </td>
+            <td class="fecha">{{ t.subida_en.strftime('%d/%m/%Y') }}</td>
+            <td>
+              <a href="{{ url_for('calificacion.ver_resultado', tarea_id=t.id) }}" class="btn-ver">
+                Ver <i class="ti ti-arrow-right"></i>
+              </a>
+            </td>
+            <td style="padding: 12px;">
+              <form method="POST" action="{{ url_for('calificacion.eliminar_tarea', tarea_id=t.id) }}" 
+                    onsubmit="return confirm('¿Estás seguro de eliminar la tarea de {{ t.estudiante_nombre }}? Esta acción no se puede deshacer.');" 
+                    style="display: inline;">
+                <button type="submit" class="btn-eliminar-tarea" title="Eliminar tarea">
+                  <i class="ti ti-trash"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- 📋 Resumen al pie -->
+    <div class="resumen-historial">
+      <div>
+        <i class="ti ti-chart-bar"></i> Total de tareas: 
+        <strong>{{ tareas|length }}</strong>
+      </div>
+      <div>
+        <i class="ti ti-robot"></i> Evaluadas con Gemini AI
+      </div>
+      <div>
+        <i class="ti ti-calendar"></i> 
+        {% if tareas %}
+          Mostrando del {{ tareas[0].subida_en.strftime('%d/%m/%Y') if tareas[0] else '' }}
+          al {{ tareas[-1].subida_en.strftime('%d/%m/%Y') if tareas[-1] else '' }}
+        {% endif %}
+      </div>
+    </div>
+    
+    {% else %}
+    <div class="empty-state">
+      <i class="ti ti-inbox"></i>
+      <p>{% if busqueda or materia_seleccionada %}No hay tareas que coincidan con los filtros seleccionados.{% else %}No hay tareas en el historial todavía.{% endif %}</p>
+      <a href="{{ url_for('calificacion.calificar') }}" class="btn-primary-custom">
+        <i class="ti ti-plus"></i> Calificar primera tarea
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ✏️ Corrección manual del nombre del estudiante -->
+<script>
+function corregirNombre(tareaId, nombreActual) {
+  const nuevo = prompt('Corrige el nombre del estudiante:', nombreActual);
+  if (nuevo === null) return;
+  const nombreLimpio = nuevo.trim();
+  if (!nombreLimpio || nombreLimpio === nombreActual) return;
+
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = `/tarea/${tareaId}/renombrar`;
+
+  const inputNombre = document.createElement('input');
+  inputNombre.type = 'hidden';
+  inputNombre.name = 'estudiante_nombre';
+  inputNombre.value = nombreLimpio;
+  form.appendChild(inputNombre);
+
+  const inputVolver = document.createElement('input');
+  inputVolver.type = 'hidden';
+  inputVolver.name = 'volver_a';
+  inputVolver.value = window.location.pathname + window.location.search;
+  form.appendChild(inputVolver);
+
+  document.body.appendChild(form);
+  form.submit();
+}
+</script>
+
+<!-- 🔧 Script para actualizar el enlace de exportación con los filtros -->
+<script>
+function actualizarEnlaceExportar() {
+    const materia = document.getElementById('materia_filtro').value;
+    const busqueda = document.getElementById('busqueda').value;
+    const btn = document.getElementById('btnExportarExcel');
+    
+    let url = "{{ url_for('calificacion.exportar_excel') }}?";
+    const params = [];
+    
+    if (materia) {
+        params.push('materia=' + encodeURIComponent(materia));
+    }
+    if (busqueda) {
+        params.push('busqueda=' + encodeURIComponent(busqueda));
+    }
+    
+    btn.href = url + params.join('&');
+}
+
+// Actualizar al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    actualizarEnlaceExportar();
+});
+</script>
+{% endblock %}

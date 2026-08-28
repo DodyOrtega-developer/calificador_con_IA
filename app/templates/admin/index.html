@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block title %}Panel Admin – SmartGrader UTM{% endblock %}
+{% block page_title %}Panel de Administración{% endblock %}
+{% block page_subtitle %}Gestión de profesores y materias{% endblock %}
+
+{% block content %}
+<div class="header-actions" style="margin-bottom: 2rem;">
+  <div>
+    <p style="color: var(--gray-600); font-size: 0.9rem;">
+      <i class="ti ti-users" style="color: var(--primary);"></i>
+      {{ profesores|length }} profesor{{ 'es' if profesores|length != 1 else '' }} registrado{{ 's' if profesores|length != 1 else '' }}
+    </p>
+  </div>
+  <a href="{{ url_for('admin.nuevo_profesor') }}" class="btn-primary-custom">
+    <i class="ti ti-user-plus"></i>
+    Agregar Profesor
+  </a>
+</div>
+
+{% if profesores %}
+<div class="card-premium">
+  <div class="card-header-premium" style="display:flex; justify-content:space-between; align-items:center;">
+    <span style="font-weight:700; color:var(--primary-dark); display:flex; align-items:center; gap:8px;">
+      <i class="ti ti-school" style="color:var(--gold);"></i>
+      Profesores registrados
+    </span>
+  </div>
+  <div class="card-body-premium" style="padding: 0;">
+    <table class="table-premium">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nombre</th>
+          <th>Correo</th>
+          <th>Materias</th>
+          <th>Registrado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in profesores %}
+        <tr>
+          <td class="numero">{{ loop.index }}</td>
+          <td>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,var(--primary),var(--primary-dark)); color:white; font-weight:700; font-size:0.85rem; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                {{ p.nombre[:2].upper() }}
+              </div>
+              <span style="font-weight:600; color:var(--gray-800);">{{ p.nombre }}</span>
+            </div>
+          </td>
+          <td style="color:var(--gray-600); font-size:0.85rem;">{{ p.correo }}</td>
+          <td>
+            <a href="{{ url_for('admin.materias_profesor', id=p.id) }}"
+               style="display:inline-flex; align-items:center; gap:6px; background:var(--primary-soft); color:var(--primary-dark); padding:4px 12px; border-radius:20px; font-size:0.78rem; font-weight:600; text-decoration:none;">
+              <i class="ti ti-books" style="font-size:0.9rem;"></i>
+              {{ p.total_materias }} materia{{ 's' if p.total_materias != 1 else '' }}
+            </a>
+          </td>
+          <td class="fecha">{{ p.creado_en.strftime('%d/%m/%Y') }}</td>
+          <td>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+              <a href="{{ url_for('admin.materias_profesor', id=p.id) }}"
+                 style="display:inline-flex; align-items:center; gap:6px; padding:8px 16px; background:var(--primary); color:white; border-radius:8px; text-decoration:none; font-size:0.82rem; font-weight:600; transition:all 0.2s;"
+                 onmouseover="this.style.background='var(--primary-dark)'; this.style.transform='translateY(-2px)'"
+                 onmouseout="this.style.background='var(--primary)'; this.style.transform='translateY(0)'">
+                <i class="ti ti-books" style="font-size:1rem;"></i>
+                Materias
+              </a>
+              <a href="{{ url_for('admin.editar_profesor', id=p.id) }}"
+                 style="display:inline-flex; align-items:center; gap:6px; padding:8px 16px; background:transparent; border:1.5px solid var(--gray-300); color:var(--gray-800); border-radius:8px; text-decoration:none; font-size:0.82rem; font-weight:600; transition:all 0.2s;"
+                 onmouseover="this.style.borderColor='var(--primary)'; this.style.color='var(--primary)'; this.style.transform='translateY(-2px)'"
+                 onmouseout="this.style.borderColor='var(--gray-300)'; this.style.color='var(--gray-800)'; this.style.transform='translateY(0)'">
+                <i class="ti ti-edit" style="font-size:1rem;"></i>
+                Editar
+              </a>
+              <form method="POST" action="{{ url_for('admin.eliminar_profesor', id=p.id) }}"
+                    onsubmit="return confirm('¿Eliminar al profesor {{ p.nombre }} y todos sus datos?');">
+                <button type="submit"
+                        style="display:inline-flex; align-items:center; gap:6px; padding:8px 14px; background:transparent; border:1.5px solid #FFCDD2; color:#C62828; border-radius:8px; font-size:0.82rem; font-weight:600; cursor:pointer; transition:all 0.2s;"
+                        onmouseover="this.style.background='#FFEBEE'; this.style.transform='translateY(-2px)'"
+                        onmouseout="this.style.background='transparent'; this.style.transform='translateY(0)'">
+                  <i class="ti ti-trash" style="font-size:1rem;"></i>
+                  Eliminar
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="empty-state-materias">
+  <i class="ti ti-user-off"></i>
+  <h3 style="font-size:1.1rem; margin-bottom:0.5rem; color:var(--gray-800);">Sin profesores registrados</h3>
+  <p>Agrega el primer profesor para comenzar.</p>
+  <a href="{{ url_for('admin.nuevo_profesor') }}" class="btn-primary-custom">
+    <i class="ti ti-user-plus"></i>
+    Agregar Profesor
+  </a>
+</div>
+{% endif %}
+{% endblock %}

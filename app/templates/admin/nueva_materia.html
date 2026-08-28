@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}Nueva Materia – Admin{% endblock %}
+{% block page_title %}Nueva Materia{% endblock %}
+{% block page_subtitle %}Asignar materia a {{ profesor.nombre }}{% endblock %}
+
+{% block content %}
+<div class="form-container">
+  <div class="form-card">
+    <div class="card-premium">
+      <div class="card-header-premium">
+        <span style="font-weight:700; color:var(--primary-dark); display:flex; align-items:center; gap:8px;">
+          <i class="ti ti-books" style="color:var(--gold);"></i>
+          Datos de la materia
+        </span>
+      </div>
+      <div class="card-body-premium">
+
+        <!-- Info del profesor -->
+        <div style="display:flex; align-items:center; gap:10px; background:var(--primary-soft); padding:12px 16px; border-radius:var(--radius-md); margin-bottom:1.5rem;">
+          <div style="width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,var(--primary),var(--primary-dark)); color:white; font-weight:700; font-size:0.85rem; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            {{ profesor.nombre[:2].upper() }}
+          </div>
+          <div>
+            <div style="font-weight:700; font-size:0.9rem; color:var(--primary-dark);">{{ profesor.nombre }}</div>
+            <div style="font-size:0.75rem; color:var(--gray-600);">{{ profesor.correo }}</div>
+          </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('admin.nueva_materia', id=profesor.id) }}">
+          <div class="form-group-modern">
+            <label>
+              <i class="ti ti-book" style="margin-right:6px;"></i>
+              Nombre de la materia <span class="required">*</span>
+            </label>
+            <input type="text" name="nombre" placeholder="Ej. Programación Orientada a Objetos" required autofocus>
+          </div>
+
+          <div class="form-group-modern">
+            <label>
+              <i class="ti ti-hash" style="margin-right:6px;"></i>
+              Código de la materia
+            </label>
+            <input type="text" name="codigo" placeholder="Ej. INF-301">
+            <span class="form-hint">Opcional.</span>
+          </div>
+
+          <div class="form-group-modern">
+            <label>
+              <i class="ti ti-calendar" style="margin-right:6px;"></i>
+              Período académico
+            </label>
+            <input type="text" name="periodo" placeholder="Ej. 2025-A">
+            <span class="form-hint">Opcional.</span>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary-custom">
+              <i class="ti ti-check"></i>
+              Asignar Materia
+            </button>
+            <a href="{{ url_for('admin.materias_profesor', id=profesor.id) }}" class="btn-cancelar">
+              <i class="ti ti-x"></i>
+              Cancelar
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

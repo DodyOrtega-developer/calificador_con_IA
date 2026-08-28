@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block page_title %}Nueva materia{% endblock %}
+{% block page_subtitle %}Registra una asignatura que impartes{% endblock %}
+
+{% block content %}
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.75rem;">
+  <div style="display:flex; align-items:center; gap:6px; font-size:0.78rem;">
+    <a href="{{ url_for('dashboard.index') }}" style="color:var(--gray-500); text-decoration:none; display:flex; align-items:center; gap:3px;">
+      <i class="ti ti-home" style="font-size:0.8rem;"></i> Dashboard
+    </a>
+    <i class="ti ti-chevron-right" style="font-size:0.65rem; color:var(--gray-400);"></i>
+    <span style="color:var(--primary-dark); font-weight:600;">Nueva materia</span>
+  </div>
+  <a href="{{ url_for('dashboard.index') }}" class="btn-outline-custom">
+    <i class="ti ti-arrow-left"></i> Volver
+  </a>
+</div>
+
+<div class="form-container">
+  <div class="card-premium form-card">
+    <div class="card-header-premium">
+      <i class="ti ti-school" style="font-size: 1.2rem; margin-right: 8px;"></i>
+      <strong>Datos de la materia</strong>
+    </div>
+    <div class="card-body-premium">
+      <form method="POST">
+        <div class="form-group-modern">
+          <label>
+            <i class="ti ti-book" style="margin-right: 6px;"></i>
+            Nombre de la materia <span class="required">*</span>
+          </label>
+          <input type="text" name="nombre" placeholder="Ej: Ingeniería de Software II" required>
+          <small class="form-hint">Nombre completo de la asignatura</small>
+        </div>
+        
+        <div class="form-group-modern">
+          <label>
+            <i class="ti ti-hash" style="margin-right: 6px;"></i>
+            Código
+          </label>
+          <input type="text" name="codigo" placeholder="Ej: ISW-402">
+          <small class="form-hint">Código institucional de la materia (opcional)</small>
+        </div>
+        
+        <div class="form-group-modern">
+          <label>
+            <i class="ti ti-calendar" style="margin-right: 6px;"></i>
+            Período académico
+          </label>
+          <input type="text" name="periodo" placeholder="Ej: 2025-I">
+          <small class="form-hint">Ej: 2025-I, 2025-II, 2025A, etc. (opcional)</small>
+        </div>
+        
+        <div class="form-actions">
+          <button type="submit" class="btn-primary-custom">
+            <i class="ti ti-check"></i> Guardar materia
+          </button>
+          <a href="{{ url_for('dashboard.index') }}" class="btn-cancelar">
+            <i class="ti ti-x"></i> Cancelar
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

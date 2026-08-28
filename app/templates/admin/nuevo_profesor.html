@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}Nuevo Profesor – Admin{% endblock %}
+{% block page_title %}Nuevo Profesor{% endblock %}
+{% block page_subtitle %}Registrar un nuevo profesor en el sistema{% endblock %}
+
+{% block content %}
+<div class="form-container">
+  <div class="form-card">
+    <div class="card-premium">
+      <div class="card-header-premium">
+        <span style="font-weight:700; color:var(--primary-dark); display:flex; align-items:center; gap:8px;">
+          <i class="ti ti-user-plus" style="color:var(--gold);"></i>
+          Datos del profesor
+        </span>
+      </div>
+      <div class="card-body-premium">
+        <form method="POST" action="{{ url_for('admin.nuevo_profesor') }}">
+          <div class="form-group-modern">
+            <label>
+              <i class="ti ti-user" style="margin-right:6px;"></i>
+              Nombre completo <span class="required">*</span>
+            </label>
+            <input type="text" name="nombre" placeholder="Ej. Dr. Juan Pérez" required autofocus>
+          </div>
+
+          <div class="form-group-modern">
+            <label>
+              <i class="ti ti-mail" style="margin-right:6px;"></i>
+              Correo institucional <span class="required">*</span>
+            </label>
+            <input type="email" name="correo" placeholder="Ej. jperez@utm.edu.ec" required>
+          </div>
+
+          <div class="form-group-modern">
+            <label>
+              <i class="ti ti-lock" style="margin-right:6px;"></i>
+              Contraseña inicial <span class="required">*</span>
+            </label>
+            <input type="password" name="password" placeholder="Mínimo 6 caracteres" required minlength="6">
+            <span class="form-hint">El profesor podrá cambiarla desde su perfil.</span>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary-custom">
+              <i class="ti ti-check"></i>
+              Crear Profesor
+            </button>
+            <a href="{{ url_for('admin.index') }}" class="btn-cancelar">
+              <i class="ti ti-x"></i>
+              Cancelar
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

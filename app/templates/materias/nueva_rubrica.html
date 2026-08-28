@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block page_title %}Nueva rúbrica{% endblock %}
+{% block page_subtitle %}{{ materia.nombre }} — define los criterios de evaluación{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb + volver -->
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.75rem;">
+  <div style="display:flex; align-items:center; gap:6px; font-size:0.78rem; flex-wrap:wrap;">
+    <a href="{{ url_for('dashboard.index') }}" style="color:var(--gray-500); text-decoration:none; display:flex; align-items:center; gap:3px;">
+      <i class="ti ti-home" style="font-size:0.8rem;"></i> Dashboard
+    </a>
+    <i class="ti ti-chevron-right" style="font-size:0.65rem; color:var(--gray-400);"></i>
+    <a href="{{ url_for('materias.rubricas', materia_id=materia.id) }}" style="color:var(--gray-500); text-decoration:none;">{{ materia.nombre }}</a>
+    <i class="ti ti-chevron-right" style="font-size:0.65rem; color:var(--gray-400);"></i>
+    <span style="color:var(--primary-dark); font-weight:600;">Nueva rúbrica</span>
+  </div>
+  <a href="{{ url_for('materias.rubricas', materia_id=materia.id) }}" class="btn-outline-custom">
+    <i class="ti ti-arrow-left"></i> Volver
+  </a>
+</div>
+
+<div class="form-container">
+  <div class="card-premium form-card">
+    <div class="card-header-premium">
+      <i class="ti ti-clipboard-list" style="font-size: 1.2rem; margin-right: 8px;"></i>
+      <strong>Nueva rúbrica · {{ materia.nombre }}</strong>
+    </div>
+    <div class="card-body-premium">
+      <form method="POST" enctype="multipart/form-data">
+        <div class="form-group-modern">
+          <label>
+            <i class="ti ti-tag" style="margin-right: 6px;"></i>
+            Nombre de la rúbrica <span class="required">*</span>
+          </label>
+          <input type="text" name="nombre" placeholder="Ej: Rúbrica de Diagramas UML" required>
+          <small class="form-hint">Identificador único para esta rúbrica</small>
+        </div>
+
+        <div class="form-group-modern">
+          <label>
+            <i class="ti ti-trophy" style="margin-right: 6px;"></i>
+            Nota máxima <span class="required">*</span>
+          </label>
+          <div style="position: relative;">
+            <input type="number" name="nota_maxima" value="10" min="0.5" max="100" step="0.5" required
+                   style="padding-right: 60px;">
+            <span style="position:absolute; right:14px; top:50%; transform:translateY(-50%);
+                         font-size:0.8rem; font-weight:600; color:var(--gray-600); pointer-events:none;">
+              puntos
+            </span>
+          </div>
+          <small class="form-hint">Los criterios de la rúbrica suman el 100% de este valor. Ej: si la tarea vale 5 pts, coloca 5.</small>
+        </div>
+
+        <!-- ✅ NUEVO: Enunciado de la tarea -->
+        <div class="form-group-modern">
+          <label>
+            <i class="ti ti-file-description" style="margin-right: 6px;"></i>
+            Enunciado de la tarea <span class="required">*</span>
+          </label>
+          <textarea name="enunciado" rows="6" 
+                    placeholder="Describe detalladamente qué se pedía en la tarea. Ej: Realizar un diagrama de clases UML para un sistema de biblioteca que gestione préstamos, devoluciones y usuarios. El diagrama debe incluir al menos 5 clases, sus atributos, métodos y relaciones." 
+                    required></textarea>
+          <small class="form-hint">
+            <i class="ti ti-info-circle" style="margin-right: 3px;"></i>
+            Este enunciado se mostrará al momento de calificar y servirá como referencia para los estudiantes
+          </small>
+        </div>
+
+        <div class="form-group-modern">
+          <label>
+            <i class="ti ti-notes" style="margin-right: 6px;"></i>
+            Contexto adicional
+          </label>
+          <textarea name="contexto_adicional" rows="3"
+                    placeholder="Opcional: objetivos de aprendizaje, instrucciones de entrega u otras aclaraciones para la IA."></textarea>
+          <small class="form-hint">Opcional. Se suma al enunciado para que la IA tenga más contexto al calificar.</small>
+        </div>
+
+        <div class="form-group-modern">
+          <label>
+            <i class="ti ti-paperclip" style="margin-right: 6px;"></i>
+            Anexar documento fuente
+          </label>
+          <input type="file" name="documento_fuente" accept=".pdf,.doc,.docx">
+          <small class="form-hint">Opcional. PDF o Word con el material base (ej. la lectura de referencia) que la IA usará como contexto adicional al calificar.</small>
+        </div>
+
+        <div class="criterios-header">
+          <div class="criterios-title">
+            <i class="ti ti-list-check"></i>
+            Criterios de evaluación
+            <span class="criterios-total-hint">(deben sumar 100%)</span>
+          </div>
+        </div>
+
+        <!-- Encabezados de columnas -->
+        <div style="display:grid; grid-template-columns:1fr 1.4fr 100px 38px; gap:8px; padding:0 4px; margin-bottom:6px;">
+          <span style="font-size:0.72rem; font-weight:600; color:var(--gray-600); text-transform:uppercase; letter-spacing:.4px;">Criterio</span>
+          <span style="font-size:0.72rem; font-weight:600; color:var(--gray-600); text-transform:uppercase; letter-spacing:.4px;">Detalle / Descripción</span>
+          <span style="font-size:0.72rem; font-weight:600; color:var(--gray-600); text-transform:uppercase; letter-spacing:.4px; text-align:center;">% Peso</span>
+          <span></span>
+        </div>
+
+        <div id="criterios" class="criterios-list">
+          {% for i in range(4) %}
+          <div class="criterio-row" style="grid-template-columns:1fr 1.4fr 100px 38px;">
+            <div class="criterio-input">
+              <input type="text" name="criterio[]" placeholder="Ej: Normas APA" required>
+            </div>
+            <div class="criterio-input">
+              <input type="text" name="detalle[]" placeholder="Ej: Fuentes de los últimos 5 años">
+            </div>
+            <div class="criterio-peso">
+              <div class="peso-wrapper">
+                <input type="number" name="peso[]" min="1" max="100" placeholder="%" required oninput="actualizarTotal()">
+                <span class="peso-symbol">%</span>
+              </div>
+            </div>
+            <button type="button" class="btn-remove" onclick="eliminarFila(this)">
+              <i class="ti ti-trash"></i>
+            </button>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="criterios-actions">
+          <button type="button" class="btn-add" onclick="agregarFila()">
+            <i class="ti ti-plus"></i> Agregar criterio
+          </button>
+          <div class="total-box">
+            <span class="total-label">
+              <i class="ti ti-chart-pie"></i> Total:
+            </span>
+            <strong id="total" class="total-value">0%</strong>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-primary-custom">
+            <i class="ti ti-check"></i> Guardar rúbrica
+          </button>
+          <a href="{{ url_for('materias.rubricas', materia_id=materia.id) }}" class="btn-cancelar">
+            <i class="ti ti-x"></i> Cancelar
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function actualizarTotal() {
+  const pesos = document.querySelectorAll('input[name="peso[]"]');
+  let total = 0;
+  pesos.forEach(p => {
+    let val = parseInt(p.value);
+    if (!isNaN(val)) total += val;
+  });
+  const el = document.getElementById('total');
+  el.textContent = total + '%';
+  if (total === 100) {
+    el.style.color = '#2E7D32';
+    el.style.background = '#E8F5E9';
+  } else {
+    el.style.color = '#C62828';
+    el.style.background = '#FFEBEE';
+  }
+}
+
+function agregarFila() {
+  const div = document.createElement('div');
+  div.className = 'criterio-row';
+  div.style.gridTemplateColumns = '1fr 1.4fr 100px 38px';
+  div.innerHTML = `
+    <div class="criterio-input">
+      <input type="text" name="criterio[]" placeholder="Nuevo criterio" required>
+    </div>
+    <div class="criterio-input">
+      <input type="text" name="detalle[]" placeholder="Descripción del criterio">
+    </div>
+    <div class="criterio-peso">
+      <div class="peso-wrapper">
+        <input type="number" name="peso[]" min="1" max="100" placeholder="%" required oninput="actualizarTotal()">
+        <span class="peso-symbol">%</span>
+      </div>
+    </div>
+    <button type="button" class="btn-remove" onclick="eliminarFila(this)">
+      <i class="ti ti-trash"></i>
+    </button>
+  `;
+  document.getElementById('criterios').appendChild(div);
+}
+
+function eliminarFila(btn) {
+  const filas = document.querySelectorAll('.criterio-row');
+  if (filas.length > 1) {
+    btn.closest('.criterio-row').remove();
+    actualizarTotal();
+  }
+}
+
+actualizarTotal();
+</script>
+{% endblock %}

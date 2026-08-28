@@ -1,0 +1,400 @@
+{% extends "base.html" %}
+
+{% block page_title %}Mis Materias{% endblock %}
+{% block page_subtitle %}Gestiona tus asignaturas y sus rúbricas de evaluación{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ── Stats bar ── */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .stat-pill {
+    background: white;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .stat-pill-icon {
+    width: 44px; height: 44px;
+    border-radius: var(--radius-sm);
+    background: var(--primary-soft);
+    color: var(--primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+  }
+  .stat-pill-icon.gold { background: var(--gold-light); color: var(--gold-dark); }
+  .stat-pill-val  { font-size: 1.6rem; font-weight: 800; color: var(--primary-dark); line-height: 1; }
+  .stat-pill-lbl  { font-size: 0.75rem; color: var(--gray-600); margin-top: 2px; }
+
+  /* ── Materia accordion card ── */
+  .materia-accord {
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 1rem;
+    border: 2px solid transparent;
+    transition: border-color 0.25s, box-shadow 0.25s;
+    overflow: hidden;
+  }
+  .materia-accord.open {
+    border-color: var(--primary);
+    box-shadow: var(--shadow-md);
+  }
+
+  .materia-accord-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    user-select: none;
+  }
+  .materia-accord-header:hover { background: var(--gray-50); }
+
+  .materia-avatar {
+    width: 46px; height: 46px;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    font-weight: 800; font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .materia-info-block { flex: 1; min-width: 0; }
+  .materia-info-block h3 {
+    font-size: 1rem; font-weight: 700;
+    color: var(--gray-900); margin: 0 0 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .materia-meta {
+    display: flex; gap: 10px; flex-wrap: wrap;
+    font-size: 0.75rem; color: var(--gray-600);
+  }
+  .materia-meta span { display: flex; align-items: center; gap: 4px; }
+
+  .materia-badges { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+  .badge-count {
+    background: var(--primary-soft); color: var(--primary);
+    font-size: 0.72rem; font-weight: 700;
+    padding: 3px 10px; border-radius: 20px;
+    white-space: nowrap;
+  }
+  .badge-count.gold { background: var(--gold-light); color: var(--gold-dark); }
+
+  .materia-accord-actions {
+    display: flex; gap: 6px; align-items: center;
+    flex-shrink: 0;
+  }
+
+  .btn-sm-icon {
+    width: 34px; height: 34px;
+    border-radius: var(--radius-sm);
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.9rem;
+    transition: background 0.2s, color 0.2s;
+    text-decoration: none;
+  }
+  .btn-sm-edit   { background: var(--gray-100); color: var(--gray-700); }
+  .btn-sm-edit:hover  { background: #E3F2FD; color: #1565C0; }
+  .btn-sm-del    { background: var(--gray-100); color: var(--gray-700); }
+  .btn-sm-del:hover   { background: #FFEBEE; color: #C62828; }
+  .btn-sm-add    { background: var(--primary-soft); color: var(--primary); font-size: 0.78rem;
+                   font-weight: 600; padding: 0 12px; width: auto; white-space: nowrap; gap: 4px; }
+  .btn-sm-add:hover   { background: var(--primary); color: white; }
+
+  .chevron-icon {
+    font-size: 1rem; color: var(--gray-600);
+    transition: transform 0.3s ease;
+    flex-shrink: 0;
+  }
+  .materia-accord.open .chevron-icon { transform: rotate(180deg); }
+
+  /* ── Acordeón body ── */
+  .materia-accord-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border-top: 1px solid transparent;
+  }
+  .materia-accord.open .materia-accord-body {
+    max-height: 3000px;
+    border-top-color: var(--gray-200);
+  }
+  .materia-accord-inner { padding: 1.25rem; }
+
+  /* ── Rúbricas dentro del acordeón ── */
+  .rubrica-incard {
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    margin-bottom: 1rem;
+    overflow: hidden;
+  }
+  .rubrica-incard:last-child { margin-bottom: 0; }
+
+  .rubrica-incard-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    background: linear-gradient(90deg, var(--primary-soft), white);
+    border-bottom: 1px solid var(--gray-200);
+  }
+  .rubrica-incard-header .r-nombre {
+    flex: 1; font-weight: 700; font-size: 0.9rem; color: var(--primary-dark);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .r-nota-chip {
+    background: var(--gold); color: var(--primary-dark);
+    font-size: 0.7rem; font-weight: 700;
+    padding: 2px 10px; border-radius: 20px;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .rubrica-incard-actions { display: flex; gap: 5px; flex-shrink: 0; }
+
+  .criterio-mini-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--gray-100);
+    font-size: 0.82rem;
+  }
+  .criterio-mini-row:last-child { border-bottom: none; }
+  .cm-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--primary); margin-top: 5px; flex-shrink: 0;
+  }
+  .cm-nombre { font-weight: 600; color: var(--gray-800); }
+  .cm-detalle { font-size: 0.75rem; color: var(--gray-600); margin-top: 1px; }
+  .cm-peso {
+    margin-left: auto; flex-shrink: 0;
+    background: var(--gray-100); color: var(--gray-700);
+    font-size: 0.72rem; font-weight: 700;
+    padding: 2px 8px; border-radius: 12px;
+  }
+
+  .rubrica-empty {
+    padding: 14px;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--gray-600);
+  }
+
+  .no-rubricas-hint {
+    background: var(--gold-light);
+    border: 1px dashed var(--gold);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    text-align: center;
+    color: var(--gray-700);
+    font-size: 0.85rem;
+  }
+  .no-rubricas-hint i { font-size: 1.8rem; color: var(--gold-dark); display: block; margin-bottom: 6px; }
+
+  /* ── Empty state ── */
+  .empty-materias {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--gray-600);
+  }
+  .empty-materias i { font-size: 3rem; color: var(--gray-300); display: block; margin-bottom: 1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+  <div>
+    <h1 style="font-size:1.4rem; font-weight:800; color:var(--primary-dark); margin:0;">Mis Materias</h1>
+    <p style="font-size:0.85rem; color:var(--gray-600); margin:4px 0 0;">Haz clic en una materia para ver y gestionar sus rúbricas</p>
+  </div>
+  <a href="{{ url_for('materias.nueva') }}" class="btn-primary-custom">
+    <i class="ti ti-plus"></i> Nueva materia
+  </a>
+</div>
+
+<!-- Stats -->
+{% set total_criterios = namespace(val=0) %}
+{% for m in materias %}{% for r in m.rubricas %}{% set total_criterios.val = total_criterios.val + r.get_criterios()|length %}{% endfor %}{% endfor %}
+
+<div class="stats-bar">
+  <div class="stat-pill">
+    <div class="stat-pill-icon"><i class="ti ti-books"></i></div>
+    <div>
+      <div class="stat-pill-val">{{ materias|length }}</div>
+      <div class="stat-pill-lbl">Materias activas</div>
+    </div>
+  </div>
+  <div class="stat-pill">
+    <div class="stat-pill-icon"><i class="ti ti-clipboard-list"></i></div>
+    <div>
+      <div class="stat-pill-val">{{ total_rubricas }}</div>
+      <div class="stat-pill-lbl">Rúbricas creadas</div>
+    </div>
+  </div>
+  <div class="stat-pill">
+    <div class="stat-pill-icon gold"><i class="ti ti-list-check"></i></div>
+    <div>
+      <div class="stat-pill-val">{{ total_criterios.val }}</div>
+      <div class="stat-pill-lbl">Criterios en total</div>
+    </div>
+  </div>
+</div>
+
+<!-- Materias -->
+{% if materias %}
+  {% for m in materias %}
+  {% set n_rubricas = m.rubricas|length %}
+  <div class="materia-accord" id="accord-{{ m.id }}">
+
+    <!-- Header clickable -->
+    <div class="materia-accord-header" data-id="{{ m.id }}" onclick="toggleMateria(this.dataset.id)">
+      <div class="materia-avatar">{{ m.nombre[:2].upper() }}</div>
+
+      <div class="materia-info-block">
+        <h3>{{ m.nombre }}</h3>
+        <div class="materia-meta">
+          {% if m.codigo %}<span><i class="ti ti-hash"></i> {{ m.codigo }}</span>{% endif %}
+          {% if m.periodo %}<span><i class="ti ti-calendar"></i> {{ m.periodo }}</span>{% endif %}
+          {% if not m.codigo and not m.periodo %}<span style="color:var(--gray-400);">Sin código ni período</span>{% endif %}
+        </div>
+      </div>
+
+      <div class="materia-badges">
+        <span class="badge-count">
+          <i class="ti ti-clipboard-list" style="font-size:0.7rem;"></i>
+          {{ n_rubricas }} rúbrica{% if n_rubricas != 1 %}s{% endif %}
+        </span>
+      </div>
+
+      <!-- Acciones (detienen propagación del click del acordeón) -->
+      <div class="materia-accord-actions" onclick="event.stopPropagation()">
+        <a href="{{ url_for('materias.nueva_rubrica', materia_id=m.id) }}"
+           class="btn-sm-icon btn-sm-add" title="Agregar rúbrica">
+          <i class="ti ti-plus"></i> Rúbrica
+        </a>
+        <a href="{{ url_for('materias.editar', id=m.id) }}"
+           class="btn-sm-icon btn-sm-edit" title="Editar materia">
+          <i class="ti ti-edit"></i>
+        </a>
+        <form method="POST" action="{{ url_for('materias.eliminar', id=m.id) }}"
+              onsubmit="return confirm('¿Eliminar la materia {{ m.nombre }}? Esta acción no se puede deshacer.');"
+              style="display:inline;">
+          <button type="submit" class="btn-sm-icon btn-sm-del" title="Eliminar materia">
+            <i class="ti ti-trash"></i>
+          </button>
+        </form>
+      </div>
+
+      <i class="ti ti-chevron-down chevron-icon"></i>
+    </div>
+
+    <!-- Body expandible -->
+    <div class="materia-accord-body" id="body-{{ m.id }}">
+      <div class="materia-accord-inner">
+        {% if m.rubricas %}
+          {% for r in m.rubricas %}
+          {% set criterios = r.get_criterios() %}
+          <div class="rubrica-incard">
+
+            <!-- Cabecera rúbrica -->
+            <div class="rubrica-incard-header">
+              <i class="ti ti-clipboard-list" style="color:var(--primary); font-size:1rem; flex-shrink:0;"></i>
+              <span class="r-nombre">{{ r.nombre }}</span>
+              <span class="r-nota-chip">
+                <i class="ti ti-trophy" style="font-size:0.65rem;"></i>
+                {{ r.nota_maxima | int if r.nota_maxima == r.nota_maxima | int else r.nota_maxima }} pts
+              </span>
+              <div class="rubrica-incard-actions">
+                <a href="{{ url_for('materias.editar_rubrica', id=r.id) }}"
+                   class="btn-sm-icon btn-sm-edit" title="Editar rúbrica">
+                  <i class="ti ti-edit"></i>
+                </a>
+                <form method="POST" action="{{ url_for('materias.eliminar_rubrica', id=r.id) }}"
+                      onsubmit="return confirm('¿Eliminar la rúbrica {{ r.nombre }}?');"
+                      style="display:inline;">
+                  <button type="submit" class="btn-sm-icon btn-sm-del" title="Eliminar rúbrica">
+                    <i class="ti ti-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <!-- Criterios -->
+            {% if criterios %}
+              {% for c in criterios %}
+              <div class="criterio-mini-row">
+                <div class="cm-dot"></div>
+                <div style="flex:1; min-width:0;">
+                  <div class="cm-nombre">{{ c.criterio }}</div>
+                  {% if c.detalle %}<div class="cm-detalle">{{ c.detalle }}</div>{% endif %}
+                </div>
+                <span class="cm-peso">{{ c.peso }}%</span>
+              </div>
+              {% endfor %}
+            {% else %}
+              <div class="rubrica-empty">
+                <i class="ti ti-info-circle" style="margin-right:5px; color:var(--gray-400);"></i>
+                Sin criterios definidos
+              </div>
+            {% endif %}
+
+          </div><!-- /rubrica-incard -->
+          {% endfor %}
+
+        {% else %}
+          <div class="no-rubricas-hint">
+            <i class="ti ti-clipboard-plus"></i>
+            Esta materia aún no tiene rúbricas.<br>
+            <a href="{{ url_for('materias.nueva_rubrica', materia_id=m.id) }}"
+               style="color:var(--primary); font-weight:600; text-decoration:none; margin-top:8px; display:inline-block;">
+              <i class="ti ti-plus"></i> Crear primera rúbrica
+            </a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div><!-- /materia-accord -->
+  {% endfor %}
+
+{% else %}
+  <div class="empty-materias">
+    <i class="ti ti-books"></i>
+    <p style="font-size:1rem; font-weight:600; margin-bottom:0.5rem;">Aún no tienes materias registradas</p>
+    <p style="font-size:0.85rem; margin-bottom:1.5rem;">Crea tu primera materia para empezar a calificar</p>
+    <a href="{{ url_for('materias.nueva') }}" class="btn-primary-custom">
+      <i class="ti ti-plus"></i> Crear primera materia
+    </a>
+  </div>
+{% endif %}
+
+<script>
+function toggleMateria(id) {
+  const card = document.getElementById('accord-' + id) || document.querySelector('[data-id="' + id + '"]').closest('.materia-accord');
+  const isOpen = card.classList.contains('open');
+
+  // Cerrar todos
+  document.querySelectorAll('.materia-accord').forEach(c => c.classList.remove('open'));
+
+  // Abrir el clickeado si estaba cerrado
+  if (!isOpen) {
+    card.classList.add('open');
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+// Si solo hay una materia, abrir automáticamente
+document.addEventListener('DOMContentLoaded', () => {
+  const cards = document.querySelectorAll('.materia-accord');
+  if (cards.length === 1) cards[0].classList.add('open');
+});
+</script>
+{% endblock %}

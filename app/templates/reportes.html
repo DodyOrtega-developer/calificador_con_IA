@@ -1,0 +1,432 @@
+{% extends "base.html" %}
+
+{% block page_title %}Reportes{% endblock %}
+{% block page_subtitle %}Estadísticas y rendimiento académico{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ── Stats superiores ── */
+  .rep-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .rep-stat {
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    padding: 1.1rem 1.25rem;
+    display: flex; align-items: center; gap: 12px;
+    border-left: 4px solid var(--primary);
+  }
+  .rep-stat.gold    { border-left-color: var(--gold); }
+  .rep-stat.green   { border-left-color: #43A047; }
+  .rep-stat.red     { border-left-color: #E53935; }
+  .rep-icon {
+    width: 42px; height: 42px; border-radius: var(--radius-md);
+    background: var(--primary-soft); color: var(--primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.25rem; flex-shrink: 0;
+  }
+  .rep-stat.gold  .rep-icon { background: var(--gold-light); color: var(--gold-dark); }
+  .rep-stat.green .rep-icon { background: #E8F5E9; color: #2E7D32; }
+  .rep-stat.red   .rep-icon { background: #FFEBEE; color: #C62828; }
+  .rep-num { font-size: 1.7rem; font-weight: 800; color: var(--primary-dark); line-height: 1; }
+  .rep-lbl { font-size: 0.73rem; color: var(--gray-600); margin-top: 2px; }
+
+  /* ── Distribución ── */
+  .distrib-row {
+    margin-bottom: 1.1rem;
+  }
+  .distrib-row:last-child { margin-bottom: 0; }
+  .distrib-label {
+    display: flex; justify-content: space-between;
+    font-size: 0.83rem; margin-bottom: 5px; font-weight: 500;
+  }
+  .distrib-bar-bg {
+    height: 10px; background: var(--gray-200);
+    border-radius: 10px; overflow: hidden;
+  }
+  .distrib-bar { height: 100%; border-radius: 10px; transition: width 1s ease; }
+  .bar-excelente { background: linear-gradient(90deg, #43A047, #2E7D32); }
+  .bar-bueno     { background: linear-gradient(90deg, #7CB342, #558B2F); }
+  .bar-regular   { background: linear-gradient(90deg, #F9A825, #F57F17); }
+  .bar-reprobado { background: linear-gradient(90deg, #E53935, #B71C1C); }
+
+  .distrib-count {
+    font-size: 0.72rem; font-weight: 700; padding: 1px 8px; border-radius: 20px;
+  }
+  .dc-ex  { background:#E8F5E9; color:#2E7D32; }
+  .dc-bu  { background:#F1F8E9; color:#558B2F; }
+  .dc-re  { background:#FFF8E1; color:#F57F17; }
+  .dc-rp  { background:#FFEBEE; color:#C62828; }
+
+  /* ── Tabla por materia ── */
+  .mat-stats-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .mat-stats-table th {
+    background: var(--primary-soft); color: var(--primary-dark);
+    font-weight: 700; padding: 10px 14px; text-align: left;
+    border-bottom: 2px solid var(--primary);
+    font-size: 0.78rem; text-transform: uppercase; letter-spacing: .4px;
+  }
+  .mat-stats-table td {
+    padding: 10px 14px; border-bottom: 1px solid var(--gray-100);
+    vertical-align: middle;
+  }
+  .mat-stats-table tr:last-child td { border-bottom: none; }
+  .mat-stats-table tr:hover td { background: var(--gray-50); }
+
+  .prom-badge {
+    display: inline-block; padding: 3px 12px; border-radius: 20px;
+    font-weight: 700; font-size: 0.82rem;
+  }
+  .prom-ex  { background: #E8F5E9; color: #2E7D32; }
+  .prom-bu  { background: #F1F8E9; color: #558B2F; }
+  .prom-re  { background: #FFF8E1; color: #F57F17; }
+  .prom-rp  { background: #FFEBEE; color: #C62828; }
+  .prom-nd  { background: var(--gray-100); color: var(--gray-500); }
+
+  .mini-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .mini-bar-bg   {
+    flex: 1; height: 7px; background: var(--gray-200); border-radius: 10px; overflow: hidden; max-width: 100px;
+  }
+  .mini-bar-fill { height: 100%; border-radius: 10px; background: linear-gradient(90deg, var(--primary), var(--gold)); }
+
+  /* ── Últimas calificaciones ── */
+  .last-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid var(--gray-100);
+  }
+  .last-item:last-child { border-bottom: none; }
+  .last-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white; font-weight: 700; font-size: 0.75rem;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .last-info { flex: 1; min-width: 0; }
+  .last-nombre { font-weight: 600; font-size: 0.88rem; color: var(--gray-800); }
+  .last-meta   { font-size: 0.73rem; color: var(--gray-500); margin-top: 2px; }
+
+  @media (max-width: 900px) {
+    .rep-stats { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .rep-stats { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% set total = rangos.excelente + rangos.bueno + rangos.regular + rangos.reprobado %}
+{% set aprobados_total = rangos.excelente + rangos.bueno + rangos.regular %}
+{% set pct_ex  = ((rangos.excelente / total * 100) | round(1)) if total > 0 else 0 %}
+{% set pct_bu  = ((rangos.bueno     / total * 100) | round(1)) if total > 0 else 0 %}
+{% set pct_re  = ((rangos.regular   / total * 100) | round(1)) if total > 0 else 0 %}
+{% set pct_rp  = ((rangos.reprobado / total * 100) | round(1)) if total > 0 else 0 %}
+{% set pct_aprob = ((aprobados_total / total * 100) | round(1)) if total > 0 else 0 %}
+
+<!-- Stats superiores -->
+<div class="rep-stats">
+  <div class="rep-stat">
+    <div class="rep-icon"><i class="ti ti-users"></i></div>
+    <div>
+      <div class="rep-num">{{ total_tareas }}</div>
+      <div class="rep-lbl">Tareas calificadas</div>
+    </div>
+  </div>
+  <div class="rep-stat gold">
+    <div class="rep-icon"><i class="ti ti-chart-line"></i></div>
+    <div>
+      <div class="rep-num">{{ promedio_global }}</div>
+      <div class="rep-lbl">Promedio general (s/10)</div>
+    </div>
+  </div>
+  <div class="rep-stat green">
+    <div class="rep-icon"><i class="ti ti-circle-check"></i></div>
+    <div>
+      <div class="rep-num">{{ aprobados_total }}</div>
+      <div class="rep-lbl">Aprobados (≥7/10)</div>
+    </div>
+  </div>
+  <div class="rep-stat red">
+    <div class="rep-icon"><i class="ti ti-circle-x"></i></div>
+    <div>
+      <div class="rep-num">{{ rangos.reprobado }}</div>
+      <div class="rep-lbl">Reprobados (&lt;7/10)</div>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2">
+
+  <!-- Distribución de calificaciones -->
+  <div class="card-premium">
+    <div class="card-header-premium">
+      <i class="ti ti-chart-bar" style="font-size:1.2rem; margin-right:8px;"></i>
+      <strong>Distribución de calificaciones</strong>
+    </div>
+    <div class="card-body-premium">
+      {% if total > 0 %}
+
+      <div class="distrib-row">
+        <div class="distrib-label">
+          <span style="display:flex; align-items:center; gap:8px;">
+            <span style="width:10px; height:10px; border-radius:50%; background:#2E7D32; display:inline-block;"></span>
+            Excelente (9–10)
+          </span>
+          <span class="distrib-count dc-ex">{{ rangos.excelente }} · {{ pct_ex }}%</span>
+        </div>
+        <div class="distrib-bar-bg">
+          <div class="distrib-bar bar-excelente" style="width:{{ pct_ex }}%;"></div>
+        </div>
+      </div>
+
+      <div class="distrib-row">
+        <div class="distrib-label">
+          <span style="display:flex; align-items:center; gap:8px;">
+            <span style="width:10px; height:10px; border-radius:50%; background:#7CB342; display:inline-block;"></span>
+            Bueno (7–8.9)
+          </span>
+          <span class="distrib-count dc-bu">{{ rangos.bueno }} · {{ pct_bu }}%</span>
+        </div>
+        <div class="distrib-bar-bg">
+          <div class="distrib-bar bar-bueno" style="width:{{ pct_bu }}%;"></div>
+        </div>
+      </div>
+
+      <div class="distrib-row">
+        <div class="distrib-label">
+          <span style="display:flex; align-items:center; gap:8px;">
+            <span style="width:10px; height:10px; border-radius:50%; background:#F9A825; display:inline-block;"></span>
+            Regular (5–6.9)
+          </span>
+          <span class="distrib-count dc-re">{{ rangos.regular }} · {{ pct_re }}%</span>
+        </div>
+        <div class="distrib-bar-bg">
+          <div class="distrib-bar bar-regular" style="width:{{ pct_re }}%;"></div>
+        </div>
+      </div>
+
+      <div class="distrib-row">
+        <div class="distrib-label">
+          <span style="display:flex; align-items:center; gap:8px;">
+            <span style="width:10px; height:10px; border-radius:50%; background:#E53935; display:inline-block;"></span>
+            Reprobado (0–4.9)
+          </span>
+          <span class="distrib-count dc-rp">{{ rangos.reprobado }} · {{ pct_rp }}%</span>
+        </div>
+        <div class="distrib-bar-bg">
+          <div class="distrib-bar bar-reprobado" style="width:{{ pct_rp }}%;"></div>
+        </div>
+      </div>
+
+      <!-- Tasa de aprobación visual -->
+      <div style="margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--gray-200);">
+        <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--gray-600); margin-bottom:6px;">
+          <span style="font-weight:600;">Tasa de aprobación</span>
+          <span style="font-weight:700; color:{% if pct_aprob >= 70 %}#2E7D32{% elif pct_aprob >= 50 %}#F57F17{% else %}#C62828{% endif %};">{{ pct_aprob }}%</span>
+        </div>
+        <div style="height:12px; background:var(--gray-200); border-radius:10px; overflow:hidden;">
+          <div style="width:{{ pct_aprob }}%; height:100%;
+                      background:linear-gradient(90deg, var(--primary), var(--gold));
+                      border-radius:10px;"></div>
+        </div>
+      </div>
+
+      {% else %}
+      <div style="text-align:center; padding:2rem; color:var(--gray-500);">
+        <i class="ti ti-chart-bar" style="font-size:2.5rem; color:var(--gray-300); display:block; margin-bottom:0.75rem;"></i>
+        Aún no hay calificaciones registradas.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Últimas calificaciones -->
+  <div class="card-premium">
+    <div class="card-header-premium">
+      <i class="ti ti-history" style="font-size:1.2rem; margin-right:8px;"></i>
+      <strong>Últimas 5 calificaciones</strong>
+    </div>
+    <div class="card-body-premium">
+      {% if ultimas %}
+        {% for t in ultimas %}
+        {% set nota_max = t.rubrica.nota_maxima if t.rubrica else 10.0 %}
+        {% set nota = t.calificacion.nota_final if t.calificacion else none %}
+        {% set nota_10 = (nota / nota_max * 10) | round(1) if nota is not none and nota_max else none %}
+        <div class="last-item">
+          <div class="last-avatar">{{ t.estudiante_nombre[:2].upper() }}</div>
+          <div class="last-info">
+            <div class="last-nombre">{{ t.estudiante_nombre }}</div>
+            <div class="last-meta">
+              {{ t.materia.nombre }} · {{ t.subida_en.strftime('%d/%m/%Y') }}
+            </div>
+          </div>
+          {% if nota_10 is not none %}
+            {% if nota_10 >= 9 %}
+              <span class="prom-badge prom-ex">{{ nota_10 }}</span>
+            {% elif nota_10 >= 7 %}
+              <span class="prom-badge prom-bu">{{ nota_10 }}</span>
+            {% elif nota_10 >= 5 %}
+              <span class="prom-badge prom-re">{{ nota_10 }}</span>
+            {% else %}
+              <span class="prom-badge prom-rp">{{ nota_10 }}</span>
+            {% endif %}
+          {% else %}
+            <span class="prom-badge prom-nd">—</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+        <div style="margin-top:1rem; text-align:right;">
+          <a href="{{ url_for('calificacion.historial') }}"
+             style="font-size:0.8rem; color:var(--primary); font-weight:600; text-decoration:none;">
+            Ver historial completo <i class="ti ti-arrow-right"></i>
+          </a>
+        </div>
+      {% else %}
+        <div style="text-align:center; padding:2rem; color:var(--gray-500); font-size:0.85rem;">
+          <i class="ti ti-inbox" style="font-size:2rem; color:var(--gray-300); display:block; margin-bottom:0.5rem;"></i>
+          No hay calificaciones todavía.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<!-- Rendimiento por materia -->
+{% if materias_stats %}
+<div class="card-premium" style="margin-top:1.5rem;">
+  <div class="card-header-premium">
+    <i class="ti ti-books" style="font-size:1.2rem; margin-right:8px;"></i>
+    <strong>Rendimiento por materia</strong>
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="mat-stats-table">
+      <thead>
+        <tr>
+          <th>Materia</th>
+          <th style="text-align:center;">Rúbricas</th>
+          <th style="text-align:center;">Tareas</th>
+          <th style="text-align:center;">Promedio (s/10)</th>
+          <th style="text-align:center;">Aprobados</th>
+          <th style="text-align:center;">Reprobados</th>
+          <th>Progreso</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in materias_stats %}
+        {% set pct_ap = ((s.aprobados / s.calificadas * 100) | round(0) | int) if s.calificadas > 0 else 0 %}
+        <tr>
+          <td>
+            <div style="font-weight:600; color:var(--primary-dark);">{{ s.materia.nombre }}</div>
+            {% if s.materia.codigo %}
+            <div style="font-size:0.72rem; color:var(--gray-500);">{{ s.materia.codigo }}</div>
+            {% endif %}
+          </td>
+          <td style="text-align:center;">
+            <span style="background:var(--primary-soft); color:var(--primary); font-weight:700;
+                         padding:2px 10px; border-radius:20px; font-size:0.8rem;">
+              {{ s.rubricas }}
+            </span>
+          </td>
+          <td style="text-align:center; font-weight:600; color:var(--gray-800);">{{ s.total }}</td>
+          <td style="text-align:center;">
+            {% if s.promedio is not none %}
+              {% if s.promedio >= 9 %}
+                <span class="prom-badge prom-ex">{{ s.promedio }}</span>
+              {% elif s.promedio >= 7 %}
+                <span class="prom-badge prom-bu">{{ s.promedio }}</span>
+              {% elif s.promedio >= 5 %}
+                <span class="prom-badge prom-re">{{ s.promedio }}</span>
+              {% else %}
+                <span class="prom-badge prom-rp">{{ s.promedio }}</span>
+              {% endif %}
+            {% else %}
+              <span class="prom-badge prom-nd">—</span>
+            {% endif %}
+          </td>
+          <td style="text-align:center; font-weight:600; color:#2E7D32;">{{ s.aprobados }}</td>
+          <td style="text-align:center; font-weight:600; color:#C62828;">{{ s.reprobados }}</td>
+          <td>
+            <div class="mini-bar-wrap">
+              <div class="mini-bar-bg">
+                <div class="mini-bar-fill" style="width:{{ pct_ap }}%;"></div>
+              </div>
+              <span style="font-size:0.72rem; font-weight:600; color:var(--gray-600); min-width:32px;">{{ pct_ap }}%</span>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Informe individual por estudiante -->
+{% if estudiantes_stats %}
+<div class="card-premium" style="margin-top:1.5rem;">
+  <div class="card-header-premium" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+    <span style="display:flex; align-items:center; gap:8px;">
+      <i class="ti ti-users" style="font-size:1.2rem;"></i>
+      <strong>Informe individual por estudiante</strong>
+    </span>
+    <span style="font-size:0.75rem; color:var(--gray-500);">{{ estudiantes_stats|length }} estudiante{{ 's' if estudiantes_stats|length != 1 else '' }}</span>
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="mat-stats-table">
+      <thead>
+        <tr>
+          <th>Estudiante</th>
+          <th style="text-align:center;">Materias</th>
+          <th style="text-align:center;">Tareas</th>
+          <th style="text-align:center;">Promedio (s/10)</th>
+          <th style="text-align:center;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in estudiantes_stats %}
+        <tr>
+          <td style="font-weight:600; color:var(--primary-dark);">{{ e.nombre }}</td>
+          <td style="text-align:center;">{{ e.num_materias }}</td>
+          <td style="text-align:center; font-weight:600;">{{ e.total }}</td>
+          <td style="text-align:center;">
+            {% if e.promedio is not none %}
+              {% if e.promedio >= 9 %}
+                <span class="prom-badge prom-ex">{{ e.promedio }}</span>
+              {% elif e.promedio >= 7 %}
+                <span class="prom-badge prom-bu">{{ e.promedio }}</span>
+              {% elif e.promedio >= 5 %}
+                <span class="prom-badge prom-re">{{ e.promedio }}</span>
+              {% else %}
+                <span class="prom-badge prom-rp">{{ e.promedio }}</span>
+              {% endif %}
+            {% else %}
+              <span class="prom-badge prom-nd">—</span>
+            {% endif %}
+          </td>
+          <td style="text-align:center;">
+            <div style="display:flex; gap:6px; justify-content:center; flex-wrap:wrap;">
+              <a href="{{ url_for('calificacion.historial', busqueda=e.nombre) }}"
+                 style="display:inline-flex; align-items:center; gap:4px; padding:5px 10px; background:var(--primary-soft); color:var(--primary-dark); border-radius:8px; text-decoration:none; font-size:0.75rem; font-weight:600;">
+                <i class="ti ti-eye"></i> Ver
+              </a>
+              <a href="{{ url_for('calificacion.exportar_excel', busqueda=e.nombre) }}"
+                 style="display:inline-flex; align-items:center; gap:4px; padding:5px 10px; background:var(--gray-100); color:var(--gray-700); border-radius:8px; text-decoration:none; font-size:0.75rem; font-weight:600;">
+                <i class="ti ti-file-spreadsheet"></i> Excel
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}Configuración – SmartGrader UTM{% endblock %}
+{% block page_title %}Configuración del sistema{% endblock %}
+{% block page_subtitle %}Gestiona la API key de Gemini usada por toda la aplicación{% endblock %}
+
+{% block content %}
+<div class="form-container">
+  <div class="card-premium form-card">
+    <div class="card-header-premium">
+      <i class="ti ti-key" style="font-size: 1.2rem; margin-right: 8px;"></i>
+      <strong>API Key de Gemini</strong>
+    </div>
+    <div class="card-body-premium">
+
+      {% if cfg.gemini_api_key %}
+      <div style="display:flex; align-items:center; gap:10px; padding:10px 14px; background:#E8F5E9; border:2px solid #C8E6C9; border-radius:var(--radius-sm); margin-bottom:1.5rem;">
+        <i class="ti ti-circle-check" style="color:#2E7D32; font-size:1.2rem;"></i>
+        <div style="font-size:0.85rem; color:#2E7D32;">
+          Hay una API key configurada, terminada en
+          <strong>…{{ cfg.gemini_api_key[-4:] }}</strong>.
+        </div>
+      </div>
+      {% else %}
+      <div style="display:flex; align-items:center; gap:10px; padding:10px 14px; background:#FFF3E0; border:2px solid #FFE0B2; border-radius:var(--radius-sm); margin-bottom:1.5rem;">
+        <i class="ti ti-alert-triangle" style="color:#E65100; font-size:1.2rem;"></i>
+        <div style="font-size:0.85rem; color:#E65100;">
+          Todavía no hay ninguna API key configurada. La calificación con IA no funcionará hasta que agregues una.
+        </div>
+      </div>
+      {% endif %}
+
+      <form method="POST">
+        <div class="form-group-modern">
+          <label>
+            <i class="ti ti-key" style="margin-right: 6px;"></i>
+            Nueva API key de Gemini <span class="required">*</span>
+          </label>
+          <input type="text" name="gemini_api_key" placeholder="Pega aquí la API key de Google AI Studio" autocomplete="off" required>
+          <small class="form-hint">
+            <i class="ti ti-info-circle" style="margin-right: 3px;"></i>
+            Se usará para todas las evaluaciones de todos los profesores. Consíguela en
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio</a>.
+          </small>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-primary-custom">
+            <i class="ti ti-check"></i> Guardar API key
+          </button>
+          <a href="{{ url_for('admin.index') }}" class="btn-cancelar">
+            <i class="ti ti-x"></i> Cancelar
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

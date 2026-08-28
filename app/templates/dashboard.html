@@ -1,0 +1,590 @@
+{% extends "base.html" %}
+
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Bienvenido de vuelta, {{ current_user.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ── Stats superiores ── */
+  .dash-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .dash-stat-card {
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-left: 4px solid var(--primary);
+    transition: box-shadow 0.2s;
+  }
+  .dash-stat-card:hover { box-shadow: var(--shadow-md); }
+  .dash-stat-card.gold { border-left-color: var(--gold); }
+  .dash-stat-icon {
+    width: 52px; height: 52px;
+    border-radius: var(--radius-md);
+    background: var(--primary-soft);
+    color: var(--primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; flex-shrink: 0;
+  }
+  .dash-stat-card.gold .dash-stat-icon { background: var(--gold-light); color: var(--gold-dark); }
+  .dash-stat-num  { font-size: 2rem; font-weight: 800; color: var(--primary-dark); line-height: 1; }
+  .dash-stat-lbl  { font-size: 0.78rem; color: var(--gray-600); margin-top: 3px; }
+
+  /* ── Materia accordion ── */
+  .mat-card {
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 1rem;
+    border: 2px solid transparent;
+    overflow: hidden;
+    transition: border-color 0.25s, box-shadow 0.25s;
+  }
+  .mat-card.open {
+    border-color: var(--gold);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Cabecera */
+  .mat-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    user-select: none;
+    background: linear-gradient(135deg, var(--primary-soft) 0%, white 60%);
+    transition: background 0.2s;
+  }
+  .mat-header:hover { background: linear-gradient(135deg, #d8eeda 0%, white 70%); }
+
+  .mat-avatar {
+    width: 48px; height: 48px;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white; font-weight: 800; font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    box-shadow: var(--shadow-sm);
+  }
+  .mat-info { flex: 1; min-width: 0; }
+  .mat-nombre {
+    font-weight: 700; font-size: 0.97rem; color: var(--primary-dark);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .mat-meta {
+    display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap;
+  }
+  .mat-chip {
+    font-size: 0.7rem; color: var(--gray-600); background: var(--gray-100);
+    padding: 2px 8px; border-radius: 20px;
+    display: inline-flex; align-items: center; gap: 3px;
+  }
+
+  .mat-badges { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+  .mbadge {
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 0.72rem; font-weight: 700;
+    white-space: nowrap;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .mbadge-green { background: var(--primary-soft); color: var(--primary); }
+  .mbadge-gold  { background: var(--gold-light); color: var(--gold-dark); }
+  .mbadge-gray  { background: var(--gray-100); color: var(--gray-700); }
+
+  .mat-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .mat-btn {
+    height: 34px; padding: 0 12px;
+    border-radius: var(--radius-sm);
+    border: none; cursor: pointer;
+    display: flex; align-items: center; gap: 5px;
+    font-size: 0.78rem; font-weight: 600;
+    text-decoration: none;
+    transition: all 0.18s;
+    white-space: nowrap;
+  }
+  .mat-btn-primary { background: var(--primary); color: white; }
+  .mat-btn-primary:hover { background: var(--primary-dark); }
+  .mat-btn-gold { background: var(--gold); color: var(--primary-dark); }
+  .mat-btn-gold:hover { background: var(--gold-dark); color: white; }
+
+  .mat-chevron {
+    font-size: 1.1rem; color: var(--gray-500);
+    transition: transform 0.3s ease, color 0.2s;
+    flex-shrink: 0;
+  }
+  .mat-card.open .mat-chevron { transform: rotate(180deg); color: var(--primary); }
+
+  /* Body expandible */
+  .mat-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+    border-top: 1px solid transparent;
+  }
+  .mat-card.open .mat-body {
+    max-height: 4000px;
+    border-top-color: var(--gray-200);
+  }
+
+  /* Tabs internos */
+  .mat-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid var(--gray-200);
+    background: var(--gray-50);
+    padding: 0 1.25rem;
+  }
+  .mat-tab-btn {
+    padding: 10px 18px;
+    font-size: 0.82rem; font-weight: 600;
+    border: none; background: none; cursor: pointer;
+    color: var(--gray-600);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.2s, border-color 0.2s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .mat-tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+  .mat-tab-btn:hover { color: var(--primary); }
+
+  .mat-tab-panel { display: none; padding: 1.25rem; }
+  .mat-tab-panel.active { display: block; }
+
+  /* Rúbricas inline */
+  .rubrica-inline {
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    margin-bottom: 0.9rem;
+    overflow: hidden;
+  }
+  .rubrica-inline:last-child { margin-bottom: 0; }
+  .ri-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    background: linear-gradient(90deg, var(--primary-soft), white);
+    border-bottom: 1px solid var(--gray-200);
+  }
+  .ri-nombre { flex: 1; font-weight: 700; font-size: 0.88rem; color: var(--primary-dark); }
+  .ri-nota   {
+    background: var(--gold); color: var(--primary-dark);
+    font-size: 0.7rem; font-weight: 700;
+    padding: 2px 10px; border-radius: 20px; flex-shrink: 0;
+  }
+  .ri-actions { display: flex; gap: 4px; }
+  .ri-btn {
+    width: 30px; height: 30px;
+    border-radius: 6px; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; text-decoration: none;
+    transition: all 0.18s;
+  }
+  .ri-btn-edit { background: var(--gray-100); color: var(--gray-700); }
+  .ri-btn-edit:hover { background: #E3F2FD; color: #1565C0; }
+  .ri-btn-del  { background: var(--gray-100); color: var(--gray-700); }
+  .ri-btn-del:hover  { background: #FFEBEE; color: #C62828; }
+
+  .criterio-line {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 7px 14px;
+    border-bottom: 1px solid var(--gray-100);
+    font-size: 0.81rem;
+  }
+  .criterio-line:last-child { border-bottom: none; }
+  .cl-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--primary); margin-top: 5px; flex-shrink: 0;
+  }
+  .cl-text { flex: 1; }
+  .cl-nombre  { font-weight: 600; color: var(--gray-800); }
+  .cl-detalle { font-size: 0.73rem; color: var(--gray-600); margin-top: 1px; }
+  .cl-peso {
+    flex-shrink: 0; margin-left: auto;
+    background: var(--gray-100); color: var(--gray-700);
+    font-size: 0.7rem; font-weight: 700;
+    padding: 2px 8px; border-radius: 12px;
+  }
+  .no-rubricas {
+    background: var(--gold-light); border: 1px dashed var(--gold);
+    border-radius: var(--radius-md); padding: 1.25rem; text-align: center;
+    font-size: 0.82rem; color: var(--gray-700);
+  }
+  .no-rubricas i { font-size: 1.8rem; color: var(--gold-dark); display: block; margin-bottom: 6px; }
+
+  /* Tabla tareas */
+  .panel-toolbar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.75rem 0; margin-bottom: 1rem;
+    border-bottom: 1px solid var(--gray-200);
+    flex-wrap: wrap; gap: 0.5rem;
+  }
+  .panel-toolbar span { font-size: 0.82rem; color: var(--gray-600); font-weight: 500; }
+
+  @media (max-width: 768px) {
+    .dash-stats { grid-template-columns: 1fr 1fr; }
+    .mat-badges { display: none; }
+    .mat-actions .mat-btn span { display: none; }
+    .mat-btn { padding: 0 10px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Banner bienvenida -->
+<div style="background:linear-gradient(135deg,var(--primary),var(--primary-dark)); border-radius:var(--radius-lg);
+            padding:1.25rem 1.5rem; margin-bottom:1.5rem; color:white;
+            display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; box-shadow:var(--shadow-md);">
+  <div>
+    <div style="font-size:1.2rem; font-weight:800; display:flex; align-items:center; gap:8px;">
+      <i class="ti ti-rocket"></i> ¡Hola, {{ current_user.nombre }}!
+    </div>
+    <div style="font-size:0.83rem; opacity:0.88; margin-top:4px;">
+      Sistema de calificación inteligente · Universidad Técnica de Manabí
+    </div>
+  </div>
+  {% if materias_data %}
+  <a href="{{ url_for('calificacion.calificar') }}"
+     style="background:var(--gold); color:var(--primary-dark); padding:9px 18px;
+            border-radius:var(--radius-md); font-weight:700; font-size:0.85rem;
+            text-decoration:none; display:flex; align-items:center; gap:6px;">
+    <i class="ti ti-plus"></i> Nueva calificación
+  </a>
+  {% endif %}
+</div>
+
+<!-- Stats -->
+<div class="dash-stats">
+  <div class="dash-stat-card">
+    <div class="dash-stat-icon"><i class="ti ti-books"></i></div>
+    <div>
+      <div class="dash-stat-num">{{ total_materias }}</div>
+      <div class="dash-stat-lbl">Materias activas</div>
+    </div>
+  </div>
+  <div class="dash-stat-card">
+    <div class="dash-stat-icon"><i class="ti ti-users"></i></div>
+    <div>
+      <div class="dash-stat-num">{{ total_tareas }}</div>
+      <div class="dash-stat-lbl">Tareas calificadas</div>
+    </div>
+  </div>
+  <div class="dash-stat-card gold">
+    <div class="dash-stat-icon"><i class="ti ti-chart-line"></i></div>
+    <div>
+      <div class="dash-stat-num">{{ promedio }}</div>
+      <div class="dash-stat-lbl">Promedio general (s/10)</div>
+    </div>
+  </div>
+</div>
+
+<!-- Sección materias -->
+{% if materias_data %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+  <h2 style="font-size:1.05rem; font-weight:800; color:var(--primary-dark); margin:0;">
+    <i class="ti ti-layout-grid" style="margin-right:6px;"></i>Mis Materias
+  </h2>
+  <span style="font-size:0.78rem; color:var(--gray-600);">
+    Haz clic en una materia para ver rúbricas y estudiantes
+  </span>
+</div>
+{% if not materias_data %}
+<div style="background:var(--gold-light); border:1px solid var(--gold); border-radius:var(--radius-md);
+            padding:1rem 1.25rem; margin-bottom:1rem; font-size:0.85rem; color:var(--gray-700);
+            display:flex; align-items:center; gap:10px;">
+  <i class="ti ti-info-circle" style="color:var(--gold-dark); font-size:1.2rem; flex-shrink:0;"></i>
+  El administrador aún no te ha asignado materias. Contacta al administrador para que te las asigne.
+</div>
+{% endif %}
+
+{% for item in materias_data %}
+{% set m = item.materia %}
+{% set n_rubricas = m.rubricas|length %}
+
+<div class="mat-card" id="matcard-{{ m.id }}">
+
+  <!-- ── Cabecera ── -->
+  <div class="mat-header" data-matid="{{ m.id }}" onclick="toggleMat(this.dataset.matid)">
+
+    <div class="mat-avatar">{{ m.nombre[:2].upper() }}</div>
+
+    <div class="mat-info">
+      <div class="mat-nombre" title="{{ m.nombre }}">{{ m.nombre }}</div>
+      <div class="mat-meta">
+        {% if m.codigo %}<span class="mat-chip"><i class="ti ti-hash"></i>{{ m.codigo }}</span>{% endif %}
+        {% if m.periodo %}<span class="mat-chip"><i class="ti ti-calendar"></i>{{ m.periodo }}</span>{% endif %}
+        {% if not m.codigo and not m.periodo %}<span class="mat-chip" style="color:var(--gray-400);">Sin código ni período</span>{% endif %}
+      </div>
+    </div>
+
+    <div class="mat-badges">
+      <span class="mbadge mbadge-green">
+        <i class="ti ti-clipboard-list" style="font-size:0.7rem;"></i>
+        {{ n_rubricas }} rúbrica{% if n_rubricas != 1 %}s{% endif %}
+      </span>
+      <span class="mbadge mbadge-gray">
+        <i class="ti ti-users" style="font-size:0.7rem;"></i>
+        {{ item.total }} estudiante{% if item.total != 1 %}s{% endif %}
+      </span>
+      {% if item.promedio %}
+      <span class="mbadge mbadge-gold">
+        <i class="ti ti-chart-bar" style="font-size:0.7rem;"></i>
+        Prom: {{ item.promedio }}
+      </span>
+      {% endif %}
+    </div>
+
+    <!-- Botones de acción (no propagan el toggle) -->
+    <div class="mat-actions" onclick="event.stopPropagation()">
+      <a href="{{ url_for('materias.nueva_rubrica', materia_id=m.id) }}"
+         class="mat-btn mat-btn-primary" title="Nueva rúbrica">
+        <i class="ti ti-plus"></i> <span>Rúbrica</span>
+      </a>
+      <a href="{{ url_for('calificacion.calificar') }}"
+         class="mat-btn mat-btn-gold" title="Calificar tarea">
+        <i class="ti ti-robot"></i> <span>Calificar</span>
+      </a>
+    </div>
+
+    <i class="ti ti-chevron-down mat-chevron"></i>
+  </div>
+
+  <!-- ── Body expandible ── -->
+  <div class="mat-body" id="matbody-{{ m.id }}">
+
+    <!-- Pestañas -->
+    <div class="mat-tabs" onclick="event.stopPropagation()">
+      <button class="mat-tab-btn active" id="tab-r-{{ m.id }}"
+              onclick="switchTab({{ m.id }},'rubricas')">
+        <i class="ti ti-clipboard-list"></i> Rúbricas
+        <span style="background:var(--primary); color:white; font-size:0.65rem; padding:1px 6px; border-radius:10px;">{{ n_rubricas }}</span>
+      </button>
+      <button class="mat-tab-btn" id="tab-t-{{ m.id }}"
+              onclick="switchTab({{ m.id }},'tareas')">
+        <i class="ti ti-users"></i> Estudiantes calificados
+        <span style="background:var(--gray-300); color:var(--gray-700); font-size:0.65rem; padding:1px 6px; border-radius:10px;">{{ item.total }}</span>
+      </button>
+    </div>
+
+    <!-- Panel Rúbricas -->
+    <div class="mat-tab-panel active" id="panel-rubricas-{{ m.id }}" onclick="event.stopPropagation()">
+      {% if m.rubricas %}
+        {% for r in m.rubricas %}
+        {% set criterios = r.get_criterios() %}
+        <div class="rubrica-inline">
+          <div class="ri-header">
+            <i class="ti ti-clipboard-list" style="color:var(--primary); flex-shrink:0;"></i>
+            <span class="ri-nombre">{{ r.nombre }}</span>
+            <span class="ri-nota">
+              <i class="ti ti-trophy" style="font-size:0.65rem;"></i>
+              {{ r.nota_maxima | int if r.nota_maxima == r.nota_maxima | int else r.nota_maxima }} pts
+            </span>
+            <div class="ri-actions">
+              <a href="{{ url_for('materias.editar_rubrica', id=r.id) }}"
+                 class="ri-btn ri-btn-edit" title="Editar rúbrica">
+                <i class="ti ti-edit"></i>
+              </a>
+              <form method="POST" action="{{ url_for('materias.eliminar_rubrica', id=r.id) }}"
+                    onsubmit="return confirm('¿Eliminar la rúbrica {{ r.nombre }}?');"
+                    style="display:inline;">
+                <button type="submit" class="ri-btn ri-btn-del" title="Eliminar rúbrica">
+                  <i class="ti ti-trash"></i>
+                </button>
+              </form>
+            </div>
+          </div>
+          {% for c in criterios %}
+          <div class="criterio-line">
+            <div class="cl-dot"></div>
+            <div class="cl-text">
+              <div class="cl-nombre">{{ c.criterio }}</div>
+              {% if c.detalle %}<div class="cl-detalle">{{ c.detalle }}</div>{% endif %}
+            </div>
+            <span class="cl-peso">{{ c.peso }}%</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="no-rubricas">
+          <i class="ti ti-clipboard-plus"></i>
+          Esta materia aún no tiene rúbricas de evaluación.<br>
+          <a href="{{ url_for('materias.nueva_rubrica', materia_id=m.id) }}"
+             style="color:var(--primary); font-weight:600; text-decoration:none; margin-top:8px; display:inline-block;">
+            <i class="ti ti-plus"></i> Crear primera rúbrica
+          </a>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Panel Tareas/Estudiantes -->
+    <div class="mat-tab-panel" id="panel-tareas-{{ m.id }}" onclick="event.stopPropagation()">
+      <div class="panel-toolbar">
+        <span>
+          <i class="ti ti-users" style="color:var(--primary); margin-right:4px;"></i>
+          {{ item.total }} estudiante{% if item.total != 1 %}s{% endif %} calificado{% if item.total != 1 %}s{% endif %}
+        </span>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          {% if item.total > 0 %}
+          <a href="{{ url_for('calificacion.exportar_excel', materia_id=m.id) }}"
+             style="height:34px; padding:0 12px; border-radius:var(--radius-sm);
+                    background:#1B5E20; color:white; font-size:0.78rem; font-weight:600;
+                    text-decoration:none; display:flex; align-items:center; gap:5px;
+                    transition:background 0.18s;"
+             onmouseover="this.style.background='#2E7D32'" onmouseout="this.style.background='#1B5E20'">
+            <i class="ti ti-file-spreadsheet"></i> Exportar Excel
+          </a>
+          {% endif %}
+          <a href="{{ url_for('calificacion.calificar') }}" class="mat-btn mat-btn-primary">
+            <i class="ti ti-plus"></i> Calificar nuevo
+          </a>
+        </div>
+      </div>
+
+      {% if item.tareas %}
+      <div style="overflow-x:auto;">
+        <table class="table-premium">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Estudiante</th>
+              <th>Rúbrica</th>
+              <th>Fecha</th>
+              <th>Nota</th>
+              <th>Resumen</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for tarea in item.tareas %}
+            {% set nota_max = tarea.rubrica.nota_maxima if tarea.rubrica else 10.0 %}
+            <tr>
+              <td class="numero">{{ loop.index }}</td>
+              <td>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <div style="width:32px; height:32px; border-radius:50%;
+                              background:linear-gradient(135deg,var(--gold),var(--gold-dark));
+                              color:var(--primary-dark); font-weight:700; font-size:0.7rem;
+                              display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    {{ tarea.estudiante_nombre[:2].upper() }}
+                  </div>
+                  <span style="font-weight:600; font-size:0.88rem;">{{ tarea.estudiante_nombre }}</span>
+                </div>
+              </td>
+              <td style="font-size:0.8rem; color:var(--gray-600);">
+                {{ tarea.rubrica.nombre if tarea.rubrica else '—' }}
+              </td>
+              <td style="font-size:0.78rem; color:var(--gray-600);">
+                {{ tarea.subida_en.strftime('%d/%m/%Y') }}
+              </td>
+              <td>
+                {% if tarea.calificacion %}
+                  {% set nota = tarea.calificacion.nota_final %}
+                  {% set nota_10 = (nota / nota_max * 10) if nota_max > 0 else 0 %}
+                  <div style="font-weight:700; font-size:0.92rem; color:var(--primary-dark);">
+                    {{ "%.1f"|format(nota) }}
+                    <span style="font-size:0.7rem; color:var(--gray-500); font-weight:400;">/ {{ nota_max | int if nota_max == nota_max | int else nota_max }}</span>
+                  </div>
+                  <div style="font-size:0.7rem; margin-top:2px;">
+                    {% if nota_10 >= 8.5 %}
+                      <span class="nota-excelente">{{ "%.1f"|format(nota_10) }}/10</span>
+                    {% elif nota_10 >= 6.5 %}
+                      <span class="nota-bueno">{{ "%.1f"|format(nota_10) }}/10</span>
+                    {% elif nota_10 >= 5 %}
+                      <span class="nota-regular">{{ "%.1f"|format(nota_10) }}/10</span>
+                    {% else %}
+                      <span class="nota-reprobado">{{ "%.1f"|format(nota_10) }}/10</span>
+                    {% endif %}
+                  </div>
+                {% else %}
+                  <span class="nota-sin-calificar">—</span>
+                {% endif %}
+              </td>
+              <td style="max-width:220px; font-size:0.78rem; color:var(--gray-600); line-height:1.4;">
+                {% if tarea.calificacion and tarea.calificacion.retroalimentacion_corta %}
+                  {{ tarea.calificacion.retroalimentacion_corta }}
+                {% else %}
+                  <span style="color:var(--gray-400);">—</span>
+                {% endif %}
+              </td>
+              <td>
+                <a href="{{ url_for('calificacion.ver_resultado', tarea_id=tarea.id) }}"
+                   class="btn-ver" style="white-space:nowrap;">
+                  Ver <i class="ti ti-arrow-right"></i>
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% else %}
+      <div style="text-align:center; padding:2.5rem 1rem; color:var(--gray-600);">
+        <i class="ti ti-user-off" style="font-size:2.5rem; color:var(--gray-300); display:block; margin-bottom:0.75rem;"></i>
+        <p style="font-size:0.85rem; margin-bottom:1rem;">Aún no hay estudiantes calificados en esta materia.</p>
+        <a href="{{ url_for('calificacion.calificar') }}" class="mat-btn mat-btn-primary"
+           style="display:inline-flex; margin:0 auto;">
+          <i class="ti ti-plus"></i> Calificar primer estudiante
+        </a>
+      </div>
+      {% endif %}
+    </div>
+
+  </div><!-- /mat-body -->
+</div><!-- /mat-card -->
+{% endfor %}
+
+{% else %}
+<div style="text-align:center; padding:3rem 1rem; color:var(--gray-600);">
+  <i class="ti ti-books" style="font-size:3rem; color:var(--gray-300); display:block; margin-bottom:1rem;"></i>
+  <p style="font-size:1rem; font-weight:600; margin-bottom:0.5rem;">No tienes materias asignadas</p>
+  <p style="font-size:0.85rem;">El administrador debe asignarte las materias que impartes.</p>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleMat(id) {
+  const card = document.getElementById('matcard-' + id);
+  const isOpen = card.classList.contains('open');
+
+  document.querySelectorAll('.mat-card.open').forEach(c => c.classList.remove('open'));
+
+  if (!isOpen) {
+    card.classList.add('open');
+    setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+  }
+}
+
+function switchTab(matId, tab) {
+  const tabs   = ['rubricas', 'tareas'];
+  const tabIds = { rubricas: 'tab-r-', tareas: 'tab-t-' };
+
+  tabs.forEach(t => {
+    document.getElementById('tab-r-' + matId).classList.remove('active');
+    document.getElementById('tab-t-' + matId).classList.remove('active');
+    document.getElementById('panel-rubricas-' + matId).classList.remove('active');
+    document.getElementById('panel-tareas-' + matId).classList.remove('active');
+  });
+
+  document.getElementById('tab-' + (tab === 'rubricas' ? 'r' : 't') + '-' + matId).classList.add('active');
+  document.getElementById('panel-' + tab + '-' + matId).classList.add('active');
+}
+
+// Si solo hay una materia, abrir automáticamente
+document.addEventListener('DOMContentLoaded', () => {
+  const cards = document.querySelectorAll('.mat-card');
+  if (cards.length === 1) cards[0].classList.add('open');
+});
+</script>
+{% endblock %}
