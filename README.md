@@ -2,13 +2,13 @@
 
 Un sistema web automatizado diseñado para ayudar a los docentes a optimizar el proceso de evaluación utilizando la API de Google Gemini. El sistema permite procesar entregas masivas, aplicar rúbricas personalizadas y generar retroalimentaciones detalladas de forma automática.
 
-## 🚀 Características Principales
+## Características Principales
 
-### 👨‍💼 Módulo de Administrador
+### Módulo de Administrador
 * **Gestión de Usuarios:** Creación, edición y control de cuentas para profesores.
 * **Control de Cursos:** Asignación de materias y asignaturas específicas a cada docente.
 
-### 👩‍🏫 Módulo de Profesor
+### Módulo de Profesor
 * **Carga Masiva de Tareas:** Soporte para subir archivos comprimidos en formato `.zip` con los trabajos de los estudiantes.
 * **Formatos Soportados:** Procesamiento automático de documentos en formato `.pdf` y `.docx` (Word).
 * **Evaluación Inteligente (Gemini API):** 
@@ -22,9 +22,9 @@ Un sistema web automatizado diseñado para ayudar a los docentes a optimizar el 
   * **Retroalimentación automatizada:** Generación de comentarios detallados sobre aciertos y puntos de mejora para cada estudiante.
   * **Exportación de Datos:** Descarga de reportes de calificaciones directamente a formato **Excel**.
 
-## 🛠️ Tecnologías Utilizadas
+## Tecnologías Utilizadas
 
-* **Backend / Core:** PHP / Python (especificar según tu estructura)
+* **Backend / Core:** PHP / Python 
 * **Inteligencia Artificial:** Google Gemini API
 * **Base de Datos:** MySQL
 * **Formatos de Exportación:** Microsoft Excel
