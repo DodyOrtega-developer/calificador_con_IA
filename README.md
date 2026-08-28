@@ -24,7 +24,7 @@ Un sistema web automatizado diseñado para ayudar a los docentes a optimizar el 
 
 ## Tecnologías Utilizadas
 
-* **Backend / Core:** PHP / Python 
+* **Backend / Core:** HTML / Python 
 * **Inteligencia Artificial:** Google Gemini API
 * **Base de Datos:** MySQL
 * **Formatos de Exportación:** Microsoft Excel
@@ -32,5 +32,5 @@ Un sistema web automatizado diseñado para ayudar a los docentes a optimizar el 
 ## 📋 Requisitos Previos
 
 Antes de ejecutar el proyecto, asegúrate de contar con:
-1. Un servidor local instalado (XAMPP, Laragon, etc.).
+1. Un servidor local instalado (Laragon, etc.).
 2. Una clave de API activa de **Google Gemini**.
